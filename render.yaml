@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: mahjong-bot
+    env: node
+    buildCommand: npm install
+    startCommand: ts-node ./src/main.ts
+    plan: free
+
+    autoDeploy: false
+
+

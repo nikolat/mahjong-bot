@@ -1,0 +1,19 @@
+{
+  "name": "mahjong-bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.ts",
+  "scripts": {
+    "dev": "ts-node src/main.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "CC0-1.0",
+  "dependencies": {
+    "nostr-tools": "^1.17.0",
+    "websocket-polyfill": "^0.0.3"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.1"
+  }
+}
