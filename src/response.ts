@@ -42,6 +42,7 @@ const selectResponse = async (event: NostrEvent, mode: Mode): Promise<EventTempl
 
 const isAllowedToPost = (event: NostrEvent) => {
 	const allowedChannel: string[] = [
+		'c8d5c2709a5670d6f621ac8020ac3e4fc3057a4961a15319f7c0818309407723',//Nostr麻雀開発部
 	];
 	if (event.kind === 1) {
 		return true;
@@ -49,7 +50,7 @@ const isAllowedToPost = (event: NostrEvent) => {
 	else if (event.kind === 42) {
 		const tagRoot = event.tags.find(tag => tag.length >= 4 && tag[0] === 'e' && tag[3] === 'root');
 		if (tagRoot !== undefined) {
-			return true;//allowedChannel.includes(tagRoot[1]);
+			return allowedChannel.includes(tagRoot[1]);
 		}
 		else {
 			throw new TypeError('root is not found');
@@ -60,7 +61,7 @@ const isAllowedToPost = (event: NostrEvent) => {
 
 const getResmap = (mode: Mode): [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => Promise<[string, string[][]]> | [string, string[][]]][] => {
 	const resmapNormal: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => [string, string[][]]][] = [
-		[/^ping$/, res_ping],
+		[/ping$/, res_ping],
 	];
 	const resmapReply: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => Promise<[string, string[][]]> | [string, string[][]]][] = [
 	];
