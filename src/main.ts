@@ -31,7 +31,7 @@ const main = async () => {
 	await relay.connect();
 	console.info('connected to relay');
 
-	const sub = relay.sub([{kinds: [1, 42], '#p': [ signer.getPublicKey() ], since: Math.floor(Date.now() / 1000)}]);
+	const sub = relay.sub([{kinds: [42], '#p': [ signer.getPublicKey() ], since: Math.floor(Date.now() / 1000)}]);
 
 	sub.on('event', async (ev) => {
 		if (!validateEvent(ev)) {
@@ -61,6 +61,7 @@ const main = async () => {
 			return;
 		}
 		await relay.publish(responseEvent);
+		console.info(responseEvent);
 	});
 };
 
