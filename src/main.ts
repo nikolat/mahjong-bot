@@ -9,7 +9,7 @@ import 'websocket-polyfill';
 import { Mode, Signer } from './utils';
 import { getResponseEvent } from './response';
 
-const relayUrl = 'wss://yabu.me';
+const relayUrl = 'wss://nostr-relay.nokotaro.com';
 const mode = Mode.Reply;
 
 const main = async () => {
