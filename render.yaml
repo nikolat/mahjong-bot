@@ -3,7 +3,7 @@ services:
     name: mahjong-bot
     env: node
     buildCommand: npm install
-    startCommand: ts-node ./src/main.ts
+    startCommand: npm run start
     plan: free
 
     autoDeploy: false
