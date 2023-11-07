@@ -13,6 +13,7 @@ const relayUrl = 'wss://nostr-relay.nokotaro.com';
 const mode = Mode.Reply;
 
 const main = async () => {
+	//署名用秘密鍵を準備
 	const nsec = process.env.NOSTR_PRIVATE_KEY;
 	if (nsec === undefined) {
 		throw Error('NOSTR_PRIVATE_KEY is undefined');
@@ -23,7 +24,8 @@ const main = async () => {
 	}
 	const seckey = dr.data;
 	const signer = new Signer(seckey);
-	//入力イベントを準備
+
+	//リレーに接続
 	const relay = relayInit(relayUrl);
 	relay.on('error', () => {
 		throw Error('failed to connect');
@@ -31,8 +33,17 @@ const main = async () => {
 	await relay.connect();
 	console.info('connected to relay');
 
-	const sub = relay.sub([{kinds: [42], '#p': [ signer.getPublicKey() ], since: Math.floor(Date.now() / 1000)}]);
+	//起きた報告
+	const bootEvent = signer.finishEvent({
+		kind: 42,
+		tags: [['e', 'c8d5c2709a5670d6f621ac8020ac3e4fc3057a4961a15319f7c0818309407723', '', 'root']],
+		content: '🌅',
+		created_at: Math.floor(Date.now() / 1000),
+	});
+	await relay.publish(bootEvent);
 
+	//イベントの監視
+	const sub = relay.sub([{kinds: [42], '#p': [ signer.getPublicKey() ], since: Math.floor(Date.now() / 1000)}]);
 	sub.on('event', async (ev) => {
 		if (!validateEvent(ev)) {
 			console.error('Invalid event', ev);
