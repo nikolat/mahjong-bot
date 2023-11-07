@@ -1,3 +1,4 @@
+import { page } from './page';
 import {
 	relayInit,
 	nip19,
@@ -77,3 +78,5 @@ const main = async () => {
 };
 
 main().catch((e) => console.error(e));
+
+page();
