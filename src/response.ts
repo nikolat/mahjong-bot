@@ -59,11 +59,14 @@ const isAllowedToPost = (event: NostrEvent) => {
 	throw new TypeError(`kind ${event.kind} is not supported`);
 };
 
-const getResmap = (mode: Mode): [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => Promise<[string, string[][]]> | [string, string[][]]][] => {
-	const resmapNormal: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => [string, string[][]]][] = [
+const getResmap = (mode: Mode): [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => Promise<[string, string[][]] | null> | [string, string[][]] | null][] => {
+	const resmapNormal: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => [string, string[][]] | null][] = [
 		[/ping$/, res_ping],
+		[/gamestart$/, res_gamestart],
+		[/join$/, res_join],
+		[/reset$/, res_reset],
 	];
-	const resmapReply: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => Promise<[string, string[][]]> | [string, string[][]]][] = [
+	const resmapReply: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => Promise<[string, string[][]] | null> | [string, string[][]] | null][] = [
 	];
 	switch (mode) {
 		case Mode.Normal:
@@ -84,7 +87,11 @@ const mode_normal = async (event: NostrEvent): Promise<[string, number, string[]
 	const resmap = getResmap(Mode.Normal);
 	for (const [reg, func] of resmap) {
 		if (reg.test(event.content)) {
-			const [content, tags] = await func(event, Mode.Normal, reg);
+			const res = await func(event, Mode.Normal, reg);
+			if (res === null) {
+				return null;
+			}
+			const [content, tags] = res;
 			return [content, event.kind, tags];
 		} 
 	}
@@ -95,7 +102,11 @@ const mode_reply = async (event: NostrEvent): Promise<[string, number, string[][
 	const resmap = getResmap(Mode.Reply);
 	for (const [reg, func] of resmap) {
 		if (reg.test(event.content)) {
-			const [content, tags] = await func(event, Mode.Reply, reg);
+			const res = await func(event, Mode.Reply, reg);
+			if (res === null) {
+				return null;
+			}
+			const [content, tags] = res;
 			return [content, event.kind, tags];
 		} 
 	}
@@ -170,4 +181,27 @@ const getTagsFav = (event: NostrEvent): string[][] => {
 	tagsFav.push(['p', event.pubkey, '']);
 	tagsFav.push(['k', String(event.kind)]);
 	return tagsFav;
+};
+
+const players = [];
+
+const res_gamestart = (event: NostrEvent): [string, string[][]] | null => {
+	players.push(event.pubkey);
+	return ['Waiting for players.\nMention "join" to me.', getTagsAirrep(event)];
+};
+
+const res_join = (event: NostrEvent): [string, string[][]] | null => {
+	if (players.length === 4) {
+		return ['Sorry, we are full.', getTagsReply(event)];
+	}
+	players.push(event.pubkey);
+	if (players.length === 4) {
+		return ['Let the game begin.', getTagsAirrep(event)];
+	}
+	return null;
+};
+
+const res_reset = (event: NostrEvent): [string, string[][]] | null => {
+	players.length = 0;
+	return ['Data cleared.', getTagsAirrep(event)];
 };

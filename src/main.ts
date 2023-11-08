@@ -2,14 +2,16 @@ import { page } from './page';
 import {
 	relayInit,
 	nip19,
-	VerifiedEvent,
 	validateEvent,
 	verifySignature,
+	type VerifiedEvent,
 	type Relay,
 } from 'nostr-tools';
 import 'websocket-polyfill';
 import { Mode, Signer } from './utils';
 import { getResponseEvent } from './response';
+
+const isDebug = false;
 
 const relayUrlToRead = 'wss://yabu.me';
 const relayUrlToWrite = 'wss://relay.nostr.wirednet.jp';
@@ -53,7 +55,8 @@ const main = async () => {
 		content: '🌅',
 		created_at: Math.floor(Date.now() / 1000),
 	});
-	await post(relayWrite, bootEvent);
+	if (!isDebug)
+		await post(relayWrite, bootEvent);
 
 	//イベントの監視
 	const sub = relayRead.sub([{kinds: [42], '#p': [ signer.getPublicKey() ], since: Math.floor(Date.now() / 1000)}]);
