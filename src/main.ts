@@ -94,4 +94,5 @@ const main = async () => {
 
 main().catch((e) => console.error(e));
 
-page();
+if (!isDebug)
+	page();
