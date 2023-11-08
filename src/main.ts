@@ -13,7 +13,7 @@ import { getResponseEvent } from './response';
 const relayUrl = 'wss://yabu.me';
 const mode = Mode.Reply;
 
-const main = async () => {
+const post = async (ev: VerifiedEvent) => {
 	//投稿用パラメータを準備
 	const postUrl = 'https://nostr-webhook.compile-error.net/post';
 	const postusername = process.env.NOSTR_WEB_HOOK_USERNAME;
@@ -21,7 +21,18 @@ const main = async () => {
 	if ([postusername, postpassword].includes(undefined)) {
 		throw Error('nostr-webhook parameter is required');
 	}
+	const res = await fetch(postUrl, {
+		method: 'POST',
+		headers: {
+			'Authorization': 'Basic ' + btoa(`${postusername}:${postpassword}`),
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify(ev),
+	});
+	console.info(await res.text());
+};
 
+const main = async () => {
 	//署名用秘密鍵を準備
 	const nsec = process.env.NOSTR_PRIVATE_KEY;
 	if (nsec === undefined) {
@@ -49,7 +60,7 @@ const main = async () => {
 		content: '🌅',
 		created_at: Math.floor(Date.now() / 1000),
 	});
-	await relay.publish(bootEvent);
+	await post(bootEvent);
 
 	//イベントの監視
 	const sub = relay.sub([{kinds: [42], '#p': [ signer.getPublicKey() ], since: Math.floor(Date.now() / 1000)}]);
@@ -81,15 +92,7 @@ const main = async () => {
 			return;
 		}
 		console.info(responseEvent);
-		const res = await fetch(postUrl, {
-			method: 'POST',
-			headers: {
-				'Authorization': 'Basic ' + btoa(`${postusername}:${postpassword}`),
-				'Content-Type': 'application/json',
-			},
-			body: JSON.stringify(responseEvent),
-		});
-		console.info(await res.text());
+		await post(responseEvent);
 	});
 };
 
