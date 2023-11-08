@@ -70,9 +70,9 @@ const main = async () => {
 			return;
 		}
 		//出力イベントを取得
-		let responseEvent: VerifiedEvent | null;
+		let responseEvents: VerifiedEvent[] | null;
 		try {
-			responseEvent = await getResponseEvent(ev, signer, mode);
+			responseEvents = await getResponseEvent(ev, signer, mode);
 		} catch (error) {
 			if (error instanceof Error) {
 				console.error(error.message);
@@ -84,11 +84,13 @@ const main = async () => {
 			}
 		}
 		//出力
-		if (responseEvent === null) {
+		if (responseEvents === null) {
 			return;
 		}
-		console.info(responseEvent);
-		await post(relayWrite, responseEvent);
+		console.info(responseEvents);
+		for (const responseEvent of responseEvents) {
+			await post(relayWrite, responseEvent);
+		}
 	});
 };
 

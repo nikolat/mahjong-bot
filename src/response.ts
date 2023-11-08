@@ -1,7 +1,7 @@
-import type { EventTemplate, VerifiedEvent, Event as NostrEvent } from 'nostr-tools';
+import { type EventTemplate, type VerifiedEvent, type Event as NostrEvent, nip19 } from 'nostr-tools';
 import { Mode, Signer } from './utils';
 
-export const getResponseEvent = async (requestEvent: NostrEvent, signer: Signer, mode: Mode): Promise<VerifiedEvent | null> => {
+export const getResponseEvent = async (requestEvent: NostrEvent, signer: Signer, mode: Mode): Promise<VerifiedEvent[] | null> => {
 	if (requestEvent.pubkey === signer.getPublicKey()) {
 		//自分自身の投稿には反応しない
 		return null;
@@ -11,10 +11,10 @@ export const getResponseEvent = async (requestEvent: NostrEvent, signer: Signer,
 		//反応しないことを選択
 		return null;
 	}
-	return signer.finishEvent(res);
+	return res.map(ev => signer.finishEvent(ev));
 };
 
-const selectResponse = async (event: NostrEvent, mode: Mode): Promise<EventTemplate | null> => {
+const selectResponse = async (event: NostrEvent, mode: Mode): Promise<EventTemplate[] | null> => {
 	if (!isAllowedToPost(event)) {
 		return null;
 	}
@@ -35,9 +35,15 @@ const selectResponse = async (event: NostrEvent, mode: Mode): Promise<EventTempl
 	if (res === null) {
 		return null;
 	}
-	const [content, kind, tags, created_at] = [...res, event.created_at + 1];
-	const unsignedEvent: EventTemplate = { kind, tags, content, created_at };
-	return unsignedEvent;
+	const unsignedEvents: EventTemplate[] = [];
+	let t = 1;
+	for (const ev of res) {
+		const [content, kind, tags, created_at] = [...ev, event.created_at + t];
+		const unsignedEvent: EventTemplate = { kind, tags, content, created_at };
+		unsignedEvents.push(unsignedEvent);
+		t++;
+	}
+	return unsignedEvents;
 };
 
 const isAllowedToPost = (event: NostrEvent) => {
@@ -59,14 +65,14 @@ const isAllowedToPost = (event: NostrEvent) => {
 	throw new TypeError(`kind ${event.kind} is not supported`);
 };
 
-const getResmap = (mode: Mode): [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => Promise<[string, string[][]] | null> | [string, string[][]] | null][] => {
-	const resmapNormal: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => [string, string[][]] | null][] = [
+const getResmap = (mode: Mode): [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => Promise<[string, string[][]][] | null> | [string, string[][]][] | null][] => {
+	const resmapNormal: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => [string, string[][]][] | null][] = [
 		[/ping$/, res_ping],
 		[/gamestart$/, res_gamestart],
 		[/join$/, res_join],
 		[/reset$/, res_reset],
 	];
-	const resmapReply: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => Promise<[string, string[][]] | null> | [string, string[][]] | null][] = [
+	const resmapReply: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => Promise<[string, string[][]][] | null> | [string, string[][]][] | null][] = [
 	];
 	switch (mode) {
 		case Mode.Normal:
@@ -78,7 +84,7 @@ const getResmap = (mode: Mode): [RegExp, (event: NostrEvent, mode: Mode, regstr:
 	}
 };
 
-const mode_normal = async (event: NostrEvent): Promise<[string, number, string[][]] | null> => {
+const mode_normal = async (event: NostrEvent): Promise<[string, number, string[][]][] | null> => {
 	//自分への話しかけはreplyで対応する
 	//自分以外に話しかけている場合は割り込まない
 	if (event.tags.some(tag => tag.length >= 2 && (tag[0] === 'p'))) {
@@ -91,14 +97,13 @@ const mode_normal = async (event: NostrEvent): Promise<[string, number, string[]
 			if (res === null) {
 				return null;
 			}
-			const [content, tags] = res;
-			return [content, event.kind, tags];
+			return res.map(r => [r[0], event.kind, r[1]]);
 		} 
 	}
 	return null;
 };
 
-const mode_reply = async (event: NostrEvent): Promise<[string, number, string[][]] | null> => {
+const mode_reply = async (event: NostrEvent): Promise<[string, number, string[][]][] | null> => {
 	const resmap = getResmap(Mode.Reply);
 	for (const [reg, func] of resmap) {
 		if (reg.test(event.content)) {
@@ -106,28 +111,27 @@ const mode_reply = async (event: NostrEvent): Promise<[string, number, string[][
 			if (res === null) {
 				return null;
 			}
-			const [content, tags] = res;
-			return [content, event.kind, tags];
+			return res.map(r => [r[0], event.kind, r[1]]);
 		} 
 	}
 	return null;
 };
 
-const mode_fav = (event: NostrEvent): [string, number, string[][]] | null => {
+const mode_fav = (event: NostrEvent): [string, number, string[][]][] | null => {
 	const reactionmap: [RegExp, string][] = [
 	];
 	for (const [reg, content] of reactionmap) {
 		if (reg.test(event.content)) {
 			const kind: number = 7;
 			const tags: string[][] = getTagsFav(event);
-			return [content, kind, tags];
+			return [[content, kind, tags]];
 		} 
 	}
 	return null;
 };
 
-const res_ping = (event: NostrEvent): [string, string[][]] => {
-	return ['pong', getTagsReply(event)];
+const res_ping = (event: NostrEvent): [string, string[][]][] => {
+	return [['pong', getTagsReply(event)]];
 };
 
 const getTags = (event: NostrEvent, mode: Mode): string[][] => {
@@ -183,25 +187,64 @@ const getTagsFav = (event: NostrEvent): string[][] => {
 	return tagsFav;
 };
 
-const players = [];
+const players: string[] = [];
+let yama: string[] = [];
+let tehai: string[][] = [];
 
-const res_gamestart = (event: NostrEvent): [string, string[][]] | null => {
+const res_gamestart = (event: NostrEvent): [string, string[][]][] | null => {
 	players.push(event.pubkey);
-	return ['Waiting for players.\nMention "join" to me.', getTagsAirrep(event)];
+	return [['Waiting for players.\nMention "join" to me.', getTagsAirrep(event)]];
 };
 
-const res_join = (event: NostrEvent): [string, string[][]] | null => {
+const res_join = (event: NostrEvent): [string, string[][]][] | null => {
 	if (players.length === 4) {
-		return ['Sorry, we are full.', getTagsReply(event)];
+		return [['Sorry, we are full.', getTagsReply(event)]];
 	}
 	players.push(event.pubkey);
 	if (players.length === 4) {
-		return ['Let the game begin.', getTagsAirrep(event)];
+		const res: [string, string[][]][] = [];
+		const content = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} gamestart (ここにゲーム開始時に通知すべき情報が入る)`;
+		const tags = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+		res.push([content, tags]);
+		yama = shuffle([...pikind, ...pikind, ...pikind, ...pikind]);
+		for (let i = 0; i <= 3; i++) {
+			tehai[i] = yama.slice(0 + 13*i, 13 + 13*i);
+			tehai[i].sort(compareFn);
+			res.push([`nostr:${nip19.npubEncode(players[i])} haipai ${tehai[i].join('')}`, [...getTagsAirrep(event), ['p', players[i], '']]]);
+		}
+		const tsumo = yama[4*13+1];
+		res.push([`nostr:${nip19.npubEncode(players[0])} tsumo ${tsumo}`, [...getTagsAirrep(event), ['p', players[0], '']]]);
+		return res;
 	}
 	return null;
 };
 
-const res_reset = (event: NostrEvent): [string, string[][]] | null => {
+const res_reset = (event: NostrEvent): [string, string[][]][] | null => {
 	players.length = 0;
-	return ['Data cleared.', getTagsAirrep(event)];
+	return [['Data cleared.', getTagsAirrep(event)]];
+};
+
+const pikind = [
+	'1m', '2m', '3m', '4m', '5m', '6m', '7m', '8m', '9m',
+	'1p', '2p', '3p', '4p', '5p', '6p', '7p', '8p', '9p',
+	'1s', '2s', '3s', '4s', '5s', '6s', '7s', '8s', '9s',
+	'1z', '2z', '3z', '4z', '5z', '6z', '7z',
+];
+
+const shuffle = (array: string[]) => { 
+	for (let i = array.length - 1; i > 0; i--) { 
+		const j = Math.floor(Math.random() * (i + 1)); 
+		[array[i], array[j]] = [array[j], array[i]]; 
+	} 
+	return array; 
+}; 
+
+const compareFn = (a: string, b: string) => {
+	if (pikind.indexOf(a) < pikind.indexOf(b)) {
+		return -1;
+	}
+	else if (pikind.indexOf(a) > pikind.indexOf(b)) {
+		return 1;
+	}
+	return 0;
 };
