@@ -5,31 +5,18 @@ import {
 	VerifiedEvent,
 	validateEvent,
 	verifySignature,
+	type Relay,
 } from 'nostr-tools';
 import 'websocket-polyfill';
 import { Mode, Signer } from './utils';
 import { getResponseEvent } from './response';
 
-const relayUrl = 'wss://yabu.me';
+const relayUrlToRead = 'wss://yabu.me';
+const relayUrlToWrite = 'wss://relay.nostr.wirednet.jp';
 const mode = Mode.Reply;
 
-const post = async (ev: VerifiedEvent) => {
-	//投稿用パラメータを準備
-	const postUrl = 'https://nostr-webhook.compile-error.net/post';
-	const postusername = process.env.NOSTR_WEB_HOOK_USERNAME;
-	const postpassword = process.env.NOSTR_WEB_HOOK_PASSWORD;
-	if ([postusername, postpassword].includes(undefined)) {
-		throw Error('nostr-webhook parameter is required');
-	}
-	const res = await fetch(postUrl, {
-		method: 'POST',
-		headers: {
-			'Authorization': 'Basic ' + btoa(`${postusername}:${postpassword}`),
-			'Content-Type': 'application/json',
-		},
-		body: JSON.stringify(ev),
-	});
-	console.info(await res.text());
+const post = async (relay: Relay, ev: VerifiedEvent) => {
+	await relay.publish(ev);
 };
 
 const main = async () => {
@@ -46,12 +33,18 @@ const main = async () => {
 	const signer = new Signer(seckey);
 
 	//リレーに接続
-	const relay = relayInit(relayUrl);
-	relay.on('error', () => {
+	const relayRead = relayInit(relayUrlToRead);
+	relayRead.on('error', () => {
 		throw Error('failed to connect');
 	});
-	await relay.connect();
-	console.info('connected to relay');
+	await relayRead.connect();
+	console.info(`connected to ${relayUrlToRead}`);
+	const relayWrite = relayInit(relayUrlToWrite);
+	relayWrite.on('error', () => {
+		throw Error('failed to connect');
+	});
+	await relayWrite.connect();
+	console.info(`connected to ${relayUrlToWrite}`);
 
 	//起きた報告
 	const bootEvent = signer.finishEvent({
@@ -60,10 +53,10 @@ const main = async () => {
 		content: '🌅',
 		created_at: Math.floor(Date.now() / 1000),
 	});
-	await post(bootEvent);
+	await post(relayWrite, bootEvent);
 
 	//イベントの監視
-	const sub = relay.sub([{kinds: [42], '#p': [ signer.getPublicKey() ], since: Math.floor(Date.now() / 1000)}]);
+	const sub = relayRead.sub([{kinds: [42], '#p': [ signer.getPublicKey() ], since: Math.floor(Date.now() / 1000)}]);
 	sub.on('event', async (ev) => {
 		if (!validateEvent(ev)) {
 			console.error('Invalid event', ev);
@@ -92,7 +85,7 @@ const main = async () => {
 			return;
 		}
 		console.info(responseEvent);
-		await post(responseEvent);
+		await post(relayWrite, responseEvent);
 	});
 };
 
