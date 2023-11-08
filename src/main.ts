@@ -10,10 +10,18 @@ import 'websocket-polyfill';
 import { Mode, Signer } from './utils';
 import { getResponseEvent } from './response';
 
-const relayUrl = 'wss://nostr-relay.nokotaro.com';
+const relayUrl = 'wss://yabu.me';
 const mode = Mode.Reply;
 
 const main = async () => {
+	//投稿用パラメータを準備
+	const postUrl = 'https://nostr-webhook.compile-error.net/post';
+	const postusername = process.env.NOSTR_WEB_HOOK_USERNAME;
+	const postpassword = process.env.NOSTR_WEB_HOOK_PASSWORD;
+	if ([postusername, postpassword].includes(undefined)) {
+		throw Error('nostr-webhook parameter is required');
+	}
+
 	//署名用秘密鍵を準備
 	const nsec = process.env.NOSTR_PRIVATE_KEY;
 	if (nsec === undefined) {
@@ -72,8 +80,16 @@ const main = async () => {
 		if (responseEvent === null) {
 			return;
 		}
-		await relay.publish(responseEvent);
 		console.info(responseEvent);
+		const res = await fetch(postUrl, {
+			method: 'POST',
+			headers: {
+				'Authorization': 'Basic ' + btoa(`${postusername}:${postpassword}`),
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify(responseEvent),
+		});
+		console.info(await res.text());
 	});
 };
 
