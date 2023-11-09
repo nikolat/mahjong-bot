@@ -3,9 +3,8 @@ import { Buffer } from 'node:buffer';
 import { type EventTemplate, finishEvent, getPublicKey } from 'nostr-tools';
 
 export const enum Mode {
-	Normal,
-	Reply,
-	Fav,
+	Server,
+	Client,
 };
 
 export const buffer = async (readable: Readable) => {
