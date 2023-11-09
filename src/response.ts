@@ -221,7 +221,8 @@ const res_join = (event: NostrEvent): [string, string[][]][] | null => {
 		nYamaIndex = 66;//王牌14枚(from 52 to 65)抜く
 		tsumo = yama[nYamaIndex++];
 		const content2 = `nostr:${nip19.npubEncode(players[0])} NOTIFY tsumo ${tsumo}\n${tehai[0].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(tsumo)}:\nGET sutehai?`;
-		const tags2 = [...getTagsAirrep(event), ['p', players[0], ''], ['emoji', convertEmoji(tsumo), getEmojiUrl(tsumo)]];
+		const emoijTags = Array.from(new Set(tehai[0].concat(tsumo))).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
+		const tags2 = [...getTagsAirrep(event), ['p', players[0], ''], ...emoijTags];
 		res.push([content2, tags2]);
 		return res;
 	}
