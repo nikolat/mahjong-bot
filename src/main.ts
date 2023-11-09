@@ -63,7 +63,7 @@ const main = async () => {
 	//イベントの監視
 	const sub = relay.sub([{
 		kinds: [42],
-		'#p': signermap.keys(),
+		'#p': Array.from(signermap.keys()),
 		since: Math.floor(Date.now() / 1000)}]
 	);
 	sub.on('event', async (ev) => {
