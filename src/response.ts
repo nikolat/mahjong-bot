@@ -70,6 +70,7 @@ const getResmap = (mode: Mode): [RegExp, (event: NostrEvent, mode: Mode, regstr:
 		[/ping$/, res_ping],
 		[/gamestart$/, res_gamestart],
 		[/join$/, res_join],
+		[/sutehai\?\s(sutehai|ankan|kakan|richi|tsumo)\s?([1-9][mpsz])?/, res_sutehai],
 		[/reset$/, res_reset],
 	];
 	const resmapReply: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => Promise<[string, string[][]][] | null> | [string, string[][]][] | null][] = [
@@ -189,7 +190,9 @@ const getTagsFav = (event: NostrEvent): string[][] => {
 
 const players: string[] = [];
 let yama: string[] = [];
+let nYamaIndex = 0;
 let tehai: string[][] = [];
+let tsumo: string;
 
 const res_gamestart = (event: NostrEvent): [string, string[][]][] | null => {
 	players.push(event.pubkey);
@@ -215,15 +218,47 @@ const res_join = (event: NostrEvent): [string, string[][]][] | null => {
 			const tags = [...getTagsAirrep(event), ['p', players[i], ''], ...emoijTags];
 			res.push([content, tags]);
 		}
-		const tsumo = yama[4*13+1];
-		res.push([`nostr:${nip19.npubEncode(players[0])} tsumo\n:${convertEmoji(tsumo)}:`, [...getTagsAirrep(event), ['p', players[0], ''], ['emoji', convertEmoji(tsumo), getEmojiUrl(tsumo)]]]);
+		nYamaIndex = 66;//王牌14枚(from 52 to 65)抜く
+		tsumo = yama[nYamaIndex++];
+		const content2 = `nostr:${nip19.npubEncode(players[0])} NOTIFY tsumo ${tsumo}\n${tehai[0].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(tsumo)}:\nGET sutehai?`;
+		const tags2 = [...getTagsAirrep(event), ['p', players[0], ''], ['emoji', convertEmoji(tsumo), getEmojiUrl(tsumo)]];
+		res.push([content2, tags2]);
 		return res;
 	}
 	return null;
 };
 
+const res_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, string[][]][] | null => {
+	const match = event.content.match(regstr);
+	if (match === null) {
+		throw new Error();
+	}
+	const command = match[1];
+	const pai = match[2];
+	const i = players.indexOf(event.pubkey);
+	switch (command) {
+		case 'sutehai':
+			tehai[i].push(tsumo);
+			tehai[i].splice(tehai[i].indexOf(pai), 1);
+			tehai[i].sort(compareFn);
+			break;
+		default:
+			throw new TypeError(`command ${command} is not supported`);
+	}
+	players.push(event.pubkey);
+	tsumo = yama[nYamaIndex++];
+	const i2 = (i + 1) % 4;
+	const content = `nostr:${nip19.npubEncode(players[i2])} NOTIFY tsumo ${tsumo}\n:${tehai[i2].map(pi => `:${convertEmoji(pi)}:`).join('')} ${convertEmoji(tsumo)}:\nGET sutehai?`;
+	const tags = [...getTagsAirrep(event), ['p', players[0], ''], ['emoji', convertEmoji(tsumo), getEmojiUrl(tsumo)]];
+	return [[content, tags]];
+};
+
 const res_reset = (event: NostrEvent): [string, string[][]][] | null => {
 	players.length = 0;
+	yama = [];
+	nYamaIndex = 0;
+	tehai = [];
+	tsumo = '';
 	return [['Data cleared.', getTagsAirrep(event)]];
 };
 
