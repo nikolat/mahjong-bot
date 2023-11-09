@@ -249,8 +249,9 @@ const res_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, st
 	players.push(event.pubkey);
 	tsumo = yama[nYamaIndex++];
 	const i2 = (i + 1) % 4;
-	const content = `nostr:${nip19.npubEncode(players[i2])} NOTIFY tsumo ${tsumo}\n:${tehai[i2].map(pi => `:${convertEmoji(pi)}:`).join('')} ${convertEmoji(tsumo)}:\nGET sutehai?`;
-	const tags = [...getTagsAirrep(event), ['p', players[0], ''], ['emoji', convertEmoji(tsumo), getEmojiUrl(tsumo)]];
+	const content = `nostr:${nip19.npubEncode(players[i2])} NOTIFY tsumo ${tsumo}\n${tehai[i2].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(tsumo)}:\nGET sutehai?`;
+	const emoijTags = Array.from(new Set(tehai[i2].concat(tsumo))).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
+	const tags = [...getTagsAirrep(event), ['p', players[i2], ''], ...emoijTags];
 	return [[content, tags]];
 };
 
