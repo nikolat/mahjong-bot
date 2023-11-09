@@ -92,9 +92,10 @@ const main = async () => {
 			}
 		}
 		//出力
-		console.info(responseEvents);
+		console.info(ev);
 		for (const responseEvent of responseEvents) {
 			await post(relay, responseEvent);
+			console.info(responseEvent);
 		}
 	});
 };
