@@ -26,10 +26,10 @@ const main = async () => {
 	const nsec_rinrin = process.env.NOSTR_PRIVATE_KEY_RINRIN;
 	const nsec_chunchun = process.env.NOSTR_PRIVATE_KEY_CHUNCHUN;
 	const nsec_whanwhan = process.env.NOSTR_PRIVATE_KEY_WHANWHAN;
-	if ([nsec_jongbari, nsec_rinrin, nsec_chunchun, nsec_whanwhan].includes(undefined)) {
+	const nsecs = [nsec_jongbari, nsec_rinrin, nsec_chunchun, nsec_whanwhan];
+	if (nsecs.includes(undefined)) {
 		throw Error('NOSTR_PRIVATE_KEY is undefined');
 	}
-	const nsecs = [nsec_jongbari, nsec_rinrin, nsec_chunchun, nsec_whanwhan];
 	const signermap = new Map<string, Signer>();
 	for (const nsec of nsecs) {
 		const dr = nip19.decode(nsec as string);
@@ -40,6 +40,7 @@ const main = async () => {
 		const signer = new Signer(seckey);
 		signermap.set(signer.getPublicKey(), signer);
 	}
+	const pubkey_jongbari = getPublicKey(nip19.decode(nsec_jongbari as string).data as string);
 
 	//リレーに接続
 	const relay = relayInit(relayUrl);
@@ -50,17 +51,21 @@ const main = async () => {
 	console.info(`connected to ${relayUrl}`);
 
 	//起きた報告
-	const bootEvent = signermap.get(getPublicKey(nip19.decode(nsec_jongbari as string).data as string))?.finishEvent({
+	const bootEvent = (signermap.get(pubkey_jongbari) as Signer).finishEvent({
 		kind: 42,
 		tags: [['e', 'c8d5c2709a5670d6f621ac8020ac3e4fc3057a4961a15319f7c0818309407723', '', 'root']],
 		content: '🌅',
 		created_at: Math.floor(Date.now() / 1000),
 	});
-	if (!isDebug && bootEvent !== undefined)
+	if (!isDebug)
 		await post(relay, bootEvent);
 
 	//イベントの監視
-	const sub = relay.sub([{kinds: [42], '#p': Array.from(signermap.values()).map(signer => signer.getPublicKey()), since: Math.floor(Date.now() / 1000)}]);
+	const sub = relay.sub([{
+		kinds: [42],
+		'#p': signermap.keys(),
+		since: Math.floor(Date.now() / 1000)}]
+	);
 	sub.on('event', async (ev) => {
 		if (!validateEvent(ev)) {
 			console.error('Invalid event', ev);
@@ -74,7 +79,7 @@ const main = async () => {
 		let responseEvents: VerifiedEvent[] = [];
 		for (const pubkey of ev.tags.filter(tag => tag.length >= 2 && tag[0] === 'p' && Array.from(signermap.values()).map(signer => signer.getPublicKey()).includes(tag[1])).map(tag => tag[1])) {
 			let rs: VerifiedEvent[] | null;
-			const mode = pubkey === getPublicKey(nip19.decode(nsec_jongbari as string).data as string) ? Mode.Server : Mode.Client
+			const mode = pubkey === pubkey_jongbari ? Mode.Server : Mode.Client
 			try {
 				rs = await getResponseEvent(ev, signermap.get(pubkey) as Signer, mode);
 			} catch (error) {
