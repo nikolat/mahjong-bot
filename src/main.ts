@@ -12,6 +12,9 @@ import 'websocket-polyfill';
 import { Mode, Signer, relayUrl, getNsecs, isDebug } from './utils';
 import { getResponseEvent } from './response';
 
+if (!isDebug)
+	page();
+
 const post = async (relay: Relay, ev: VerifiedEvent) => {
 	await relay.publish(ev);
 };
@@ -90,15 +93,18 @@ const main = async () => {
 			}
 		}
 		//出力
-		console.info(ev);
-		for (const responseEvent of responseEvents) {
-			await post(relay, responseEvent);
-			console.info(responseEvent);
+		console.info('==========');
+		console.info((new Date()).toISOString());
+		console.info(`REQ from ${nip19.npubEncode(ev.pubkey)}\n${ev.content}`);
+		if (responseEvents.length > 0) {
+			const posts: Promise<void>[] = [];
+			for (const responseEvent of responseEvents) {
+				posts.push(post(relay, responseEvent));
+				console.info(`RES from ${nip19.npubEncode(responseEvent.pubkey)}\n${responseEvent.content}`);
+			}
+			await Promise.all(posts);
 		}
 	});
 };
 
 main().catch((e) => console.error(e));
-
-if (!isDebug)
-	page();

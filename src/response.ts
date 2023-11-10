@@ -138,6 +138,9 @@ const res_s_gamestart = (event: NostrEvent): [string, string[][]][] | null => {
 };
 
 const res_s_join = (event: NostrEvent): [string, string[][]][] | null => {
+	if (players.includes(event.pubkey)) {
+		return [['You have already joined.', getTagsReply(event)]];
+	}
 	if (players.length === 4) {
 		return [['Sorry, we are full.', getTagsReply(event)]];
 	}
