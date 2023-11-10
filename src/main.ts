@@ -9,10 +9,8 @@ import {
 	getPublicKey,
 } from 'nostr-tools';
 import 'websocket-polyfill';
-import { Mode, Signer, getNsecs } from './utils';
+import { Mode, Signer, getNsecs, isDebug } from './utils';
 import { getResponseEvent } from './response';
-
-const isDebug = false;
 
 const relayUrl = 'wss://relay.nostr.wirednet.jp';
 

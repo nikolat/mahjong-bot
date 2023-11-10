@@ -40,3 +40,5 @@ export const getNsecs = (): (string | undefined)[] => {
 	const nsec_whanwhan = process.env.NOSTR_PRIVATE_KEY_WHANWHAN;
 	return [nsec_jongbari, nsec_rinrin, nsec_chunchun, nsec_whanwhan];
 };
+
+export const isDebug = false;
