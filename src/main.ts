@@ -9,7 +9,7 @@ import {
 	getPublicKey,
 } from 'nostr-tools';
 import 'websocket-polyfill';
-import { Mode, Signer } from './utils';
+import { Mode, Signer, getNsecs } from './utils';
 import { getResponseEvent } from './response';
 
 const isDebug = false;
@@ -22,11 +22,8 @@ const post = async (relay: Relay, ev: VerifiedEvent) => {
 
 const main = async () => {
 	//署名用秘密鍵を準備
-	const nsec_jongbari = process.env.NOSTR_PRIVATE_KEY_JONGBARI;
-	const nsec_rinrin = process.env.NOSTR_PRIVATE_KEY_RINRIN;
-	const nsec_chunchun = process.env.NOSTR_PRIVATE_KEY_CHUNCHUN;
-	const nsec_whanwhan = process.env.NOSTR_PRIVATE_KEY_WHANWHAN;
-	const nsecs = [nsec_jongbari, nsec_rinrin, nsec_chunchun, nsec_whanwhan];
+	const nsecs: (string | undefined)[] = getNsecs();
+	const [nsec_jongbari, nsec_rinrin, nsec_chunchun, nsec_whanwhan] = nsecs;
 	if (nsecs.includes(undefined)) {
 		throw Error('NOSTR_PRIVATE_KEY is undefined');
 	}
