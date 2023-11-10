@@ -9,10 +9,8 @@ import {
 	getPublicKey,
 } from 'nostr-tools';
 import 'websocket-polyfill';
-import { Mode, Signer, getNsecs, isDebug } from './utils';
+import { Mode, Signer, relayUrl, getNsecs, isDebug } from './utils';
 import { getResponseEvent } from './response';
-
-const relayUrl = 'wss://relay.nostr.wirednet.jp';
 
 const post = async (relay: Relay, ev: VerifiedEvent) => {
 	await relay.publish(ev);
