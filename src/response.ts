@@ -58,12 +58,16 @@ const getResmap = (mode: Mode): [RegExp, (event: NostrEvent, mode: Mode, regstr:
 		[/gamestart$/, res_s_gamestart],
 		[/join$/, res_s_join],
 		[/sutehai\?\s(sutehai|ankan|kakan|richi|tsumo)\s?([1-9][mpsz])?/, res_s_sutehai],
+		[/^(sutehai\?)?([1-9][mpsz])/, res_s_sutehai],
+		[/naku\?\s(no|ron|kan|pon|chi)\s?([1-9][mpsz])?/, res_s_naku],
+		[/^(no|ron|kan|pon|chi)\s?([1-9][mpsz])?/, res_s_naku],
 		[/reset$/, res_s_reset],
 	];
 	const resmapClient: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => [string, string[][]][] | null][] = [
 		[/ping$/, res_ping],
 		[/join$/, res_c_join],
-		[/NOTIFY\stsumo\s([0-9][mpsz]).+GET sutehai\?$/s, res_c_sutehai],
+		[/NOTIFY\stsumo\snostr:npub1\w{58}\s\d+\s([0-9][mpsz]).+GET\ssutehai\?$/s, res_c_sutehai],
+		[/GET\snaku\?\s(ron|kan|pon|chi)$/s, res_c_naku],
 	];
 	switch (mode) {
 		case Mode.Server:
@@ -133,6 +137,7 @@ let tehai: string[][] = [];
 let tsumo: string;
 
 const res_s_gamestart = (event: NostrEvent): [string, string[][]][] | null => {
+	reset_game();
 	players.push(event.pubkey);
 	return [['Waiting for players.\nMention "join" to me.', getTagsAirrep(event)]];
 };
@@ -150,7 +155,7 @@ const res_s_join = (event: NostrEvent): [string, string[][]][] | null => {
 		const content = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} gamestart (ここにゲーム開始時に通知すべき情報が入る)`;
 		const tags = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
 		res.push([content, tags]);
-		yama = shuffle([...pikind, ...pikind, ...pikind, ...pikind]);
+		yama = shuffle([...paikind, ...paikind, ...paikind, ...paikind]);
 		for (let i = 0; i <= 3; i++) {
 			tehai[i] = yama.slice(0 + 13*i, 13 + 13*i);
 			tehai[i].sort(compareFn);
@@ -160,8 +165,9 @@ const res_s_join = (event: NostrEvent): [string, string[][]][] | null => {
 			res.push([content, tags]);
 		}
 		nYamaIndex = 66;//王牌14枚(from 52 to 65)抜く
-		tsumo = yama[nYamaIndex++];
-		const content2 = `nostr:${nip19.npubEncode(players[0])} NOTIFY tsumo ${tsumo}\n${tehai[0].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(tsumo)}:\nGET sutehai?`;
+		tsumo = yama[nYamaIndex];
+		nYamaIndex++
+		const content2 = `NOTIFY tsumo nostr:${nip19.npubEncode(players[0])} ${yama.length - nYamaIndex} ${tsumo}\n${tehai[0].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(tsumo)}:\nGET sutehai?`;
 		const emoijTags = Array.from(new Set(tehai[0].concat(tsumo))).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
 		const tags2 = [...getTagsAirrep(event), ['p', players[0], ''], ...emoijTags];
 		res.push([content2, tags2]);
@@ -175,10 +181,25 @@ const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, 
 	if (match === null) {
 		throw new Error();
 	}
-	const command = match[1];
+	const command = match[1] ?? 'sutehai';
 	const pai = match[2];
 	const i = players.indexOf(event.pubkey);
 	switch (command) {
+		case 'tsumo':
+			const tehai14 = tehai[i].concat(tsumo);
+			tehai14.sort(compareFn);
+			const shanten = getShanten(tehai14);
+			if (shanten === -1) {
+				const content = `${tehai[i].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(tsumo)}:\nCongratulations!`;
+				const emoijTags = Array.from(new Set(tehai14)).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
+				const tags = [...getTagsAirrep(event), ...emoijTags];
+				return [[content, tags]];
+			}
+			else {
+				const content = `shanten is ${shanten}.`;
+				const tags = getTagsReply(event);
+				return [[content, tags]];
+			}
 		case 'sutehai':
 			tehai[i].push(tsumo);
 			tehai[i].splice(tehai[i].indexOf(pai), 1);
@@ -187,21 +208,56 @@ const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, 
 		default:
 			throw new TypeError(`command ${command} is not supported`);
 	}
-	players.push(event.pubkey);
-	tsumo = yama[nYamaIndex++];
+	const naku: [string, string[][]][] = [];
+	for (const index of [0, 1, 2, 3].filter(idx => idx !== i)) {
+		const tehai14 = tehai[index].concat(pai);
+		tehai14.sort(compareFn);
+		const shanten = getShanten(tehai14);
+		if (shanten === -1) {
+			const content = `nostr:${nip19.npubEncode(players[index])}\nGET naku? ron`;
+			const tags = [...getTagsAirrep(event), ['p', players[index], '']];
+			naku.push([content, tags]);
+		}
+	}
+	if (naku.length > 0) {
+		return naku;
+	}
+	if (yama[nYamaIndex] === undefined) {
+		const content = `ryukyoku`;
+		const tags = getTagsAirrep(event);
+		return [[content, tags]];
+	}
+	tsumo = yama[nYamaIndex];
+	nYamaIndex++
 	const i2 = (i + 1) % 4;
-	const content = `nostr:${nip19.npubEncode(players[i2])} NOTIFY tsumo ${tsumo}\n${tehai[i2].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(tsumo)}:\nGET sutehai?`;
+	const content = `NOTIFY tsumo nostr:${nip19.npubEncode(players[i2])} ${yama.length - nYamaIndex} ${tsumo}\n${tehai[i2].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(tsumo)}:\nGET sutehai?`;
 	const emoijTags = Array.from(new Set(tehai[i2].concat(tsumo))).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
 	const tags = [...getTagsAirrep(event), ['p', players[i2], ''], ...emoijTags];
 	return [[content, tags]];
 };
 
+const res_s_naku = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, string[][]][] | null => {
+	const match = event.content.match(regstr);
+	if (match === null) {
+		throw new Error();
+	}
+	const command = match[1];
+	const pai = match[2];
+	const i = players.indexOf(event.pubkey);
+	switch (command) {
+		case 'ron':
+			const content = `${tehai[i].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(tsumo)}:\nCongratulations!`;
+			const emoijTags = Array.from(new Set(tehai[i].concat(tsumo))).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
+			const tags = [...getTagsAirrep(event), ...emoijTags];
+			return [[content, tags]];
+		case 'no':
+		default:
+			throw new TypeError(`command ${command} is not supported`);
+	}
+};
+
 const res_s_reset = (event: NostrEvent): [string, string[][]][] | null => {
-	players.length = 0;
-	yama = [];
-	nYamaIndex = 0;
-	tehai = [];
-	tsumo = '';
+	reset_game();
 	return [['Data cleared.', getTagsAirrep(event)]];
 };
 
@@ -216,12 +272,52 @@ const res_c_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, 
 		throw new Error();
 	}
 	const tsumo = match[1];
-	const content = `nostr:${nip19.npubEncode(event.pubkey)} sutehai? sutehai ${tsumo}\n:${convertEmoji(tsumo)}:`;
-	const tags = [...getTagsReply(event), ['emoji', convertEmoji(tsumo), getEmojiUrl(tsumo)]];
+	const i = players.indexOf(event.tags.filter(tag => tag.length >= 2 && tag[0] === 'p').map(tag => tag[1])[0]);
+	const tehai14 = tehai[i].concat(tsumo);
+	const shanten = getShanten(tehai14);
+	if (shanten === -1) {
+		const content = `nostr:${nip19.npubEncode(event.pubkey)} sutehai? tsumo\n:${convertEmoji(tsumo)}:`;
+		const emoijTags = Array.from(new Set(tehai14)).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
+		const tags = [...getTagsReply(event), ...emoijTags];
+		return [[content, tags]];
+	}
+	let sutehai;
+	const uniqTehai = new Set(tehai14);
+	const ankos = Array.from(uniqTehai).filter(pai => tehai14.reduce((sum, v) => v === pai ? sum + 1 : sum, 0) >= 3);
+	const koritsus = Array.from(uniqTehai).filter(pai => tehai14.reduce((sum, v) => v === pai ? sum + 1 : sum, 0) == 1);
+	if (ankos.length > 0) {
+		sutehai = any(ankos);
+	}
+	else {
+		sutehai = any(koritsus);
+	}
+	const content = `nostr:${nip19.npubEncode(event.pubkey)} sutehai? sutehai ${sutehai}\n:${convertEmoji(sutehai)}:`;
+	const tags = [...getTagsReply(event), ['emoji', convertEmoji(sutehai), getEmojiUrl(sutehai)]];
 	return [[content, tags]];
 };
 
-const pikind = [
+const res_c_naku = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, string[][]][] => {
+	const content = `nostr:${nip19.npubEncode(event.pubkey)} naku? ron`;
+	const tags = getTagsReply(event);
+	return [[content, tags]];
+};
+
+const reset_game = () => {
+	players.length = 0;
+	yama = [];
+	nYamaIndex = 0;
+	tehai = [];
+	tsumo = '';
+};
+
+const getShanten = (tehai14: string[]) => {
+	const uniqTehai = new Set(tehai14);
+	const nType = uniqTehai.size >= 7 ? 7 : uniqTehai.size;
+	const nToitsu = Array.from(uniqTehai).filter(pai => tehai14.reduce((sum, v) => v === pai ? sum + 1 : sum, 0) >= 2).length;
+	return 6 - nToitsu + (7 - nType);
+}
+
+const paikind = [
 	'1m', '2m', '3m', '4m', '5m', '6m', '7m', '8m', '9m',
 	'1p', '2p', '3p', '4p', '5p', '6p', '7p', '8p', '9p',
 	'1s', '2s', '3s', '4s', '5s', '6s', '7s', '8s', '9s',
@@ -237,13 +333,17 @@ const shuffle = (array: string[]) => {
 }; 
 
 const compareFn = (a: string, b: string) => {
-	if (pikind.indexOf(a) < pikind.indexOf(b)) {
+	if (paikind.indexOf(a) < paikind.indexOf(b)) {
 		return -1;
 	}
-	else if (pikind.indexOf(a) > pikind.indexOf(b)) {
+	else if (paikind.indexOf(a) > paikind.indexOf(b)) {
 		return 1;
 	}
 	return 0;
+};
+
+const any = (array: string[]): string => {
+	return array[Math.floor(Math.random() * array.length)];
 };
 
 const convertEmoji = (pai: string) => {
