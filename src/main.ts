@@ -9,7 +9,8 @@ import {
 	getPublicKey,
 } from 'nostr-tools';
 import 'websocket-polyfill';
-import { Mode, Signer, relayUrl, getNsecs, isDebug } from './utils';
+import { Mode, Signer } from './utils';
+import { relayUrl, getNsecs, isDebug } from './config';
 import { getResponseEvent } from './response';
 
 if (!isDebug)
