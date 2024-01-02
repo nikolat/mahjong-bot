@@ -1,12 +1,11 @@
 import { page } from './page';
 import {
-	relayInit,
 	nip19,
 	validateEvent,
-	verifySignature,
-	type VerifiedEvent,
-	type Relay,
+	Relay,
 	getPublicKey,
+	type NostrEvent,
+	type VerifiedEvent,
 } from 'nostr-tools';
 import 'websocket-polyfill';
 import { Mode, Signer } from './utils';
@@ -15,10 +14,6 @@ import { getResponseEvent } from './response';
 
 if (!isDebug)
 	page();
-
-const post = async (relay: Relay, ev: VerifiedEvent) => {
-	await relay.publish(ev);
-};
 
 const main = async () => {
 	//署名用秘密鍵を準備
@@ -37,15 +32,11 @@ const main = async () => {
 		const signer = new Signer(seckey);
 		signermap.set(signer.getPublicKey(), signer);
 	}
-	const pubkey_jongbari = getPublicKey(nip19.decode(nsec_jongbari as string).data as string);
+	const pubkey_jongbari = getPublicKey(nip19.decode(nsec_jongbari as string).data as Uint8Array);
 
 	//リレーに接続
-	const relay = relayInit(relayUrl);
-	relay.on('error', () => {
-		throw Error('failed to connect');
-	});
-	await relay.connect();
-	console.info(`connected to ${relayUrl}`);
+	const relay = await Relay.connect(relayUrl);
+	console.info(`connected to ${relay.url}`);
 
 	//起きた報告
 	const bootEvent = (signermap.get(pubkey_jongbari) as Signer).finishEvent({
@@ -55,21 +46,19 @@ const main = async () => {
 		created_at: Math.floor(Date.now() / 1000),
 	});
 	if (!isDebug)
-		await post(relay, bootEvent);
+		await relay.publish(bootEvent);
 
 	//イベントの監視
-	const sub = relay.sub([{
-		kinds: [42],
-		'#p': Array.from(signermap.keys()),
-		since: Math.floor(Date.now() / 1000)}]
-	);
-	sub.on('event', async (ev) => {
+	const filters = [
+		{
+			kinds: [42],
+			'#p': Array.from(signermap.keys()),
+			since: Math.floor(Date.now() / 1000)
+		}
+	];
+	const onevent = async (ev: NostrEvent) => {
 		if (!validateEvent(ev)) {
 			console.error('Invalid event', ev);
-			return;
-		}
-		if (!verifySignature(ev)) {
-			console.error('Unverified event', ev);
 			return;
 		}
 		//出力イベントを取得
@@ -98,14 +87,21 @@ const main = async () => {
 		console.info((new Date()).toISOString());
 		console.info(`REQ from ${nip19.npubEncode(ev.pubkey)}\n${ev.content}`);
 		if (responseEvents.length > 0) {
-			const posts: Promise<void>[] = [];
+			const posts: Promise<string>[] = [];
 			for (const responseEvent of responseEvents) {
-				posts.push(post(relay, responseEvent));
+				posts.push(relay.publish(responseEvent));
 				console.info(`RES from ${nip19.npubEncode(responseEvent.pubkey)}\n${responseEvent.content}`);
 			}
 			await Promise.all(posts);
 		}
-	});
+	};
+	const oneose = () => {
+		//繋ぎっぱなしにする
+	};
+	const sub = relay.subscribe(
+		filters,
+		{ onevent, oneose }
+	);
 };
 
 main().catch((e) => console.error(e));
