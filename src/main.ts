@@ -38,16 +38,6 @@ const main = async () => {
 	const relay = await Relay.connect(relayUrl);
 	console.info(`connected to ${relay.url}`);
 
-	//起きた報告
-	const bootEvent = (signermap.get(pubkey_jongbari) as Signer).finishEvent({
-		kind: 42,
-		tags: [['e', 'c8d5c2709a5670d6f621ac8020ac3e4fc3057a4961a15319f7c0818309407723', '', 'root']],
-		content: '🌅',
-		created_at: Math.floor(Date.now() / 1000),
-	});
-	if (!isDebug)
-		await relay.publish(bootEvent);
-
 	//イベントの監視
 	const filters = [
 		{
@@ -95,7 +85,17 @@ const main = async () => {
 			await Promise.all(posts);
 		}
 	};
-	const oneose = () => {
+	const oneose = async () => {
+		if (!isDebug) {
+			//起きた報告
+			const bootEvent = (signermap.get(pubkey_jongbari) as Signer).finishEvent({
+				kind: 42,
+				tags: [['e', 'c8d5c2709a5670d6f621ac8020ac3e4fc3057a4961a15319f7c0818309407723', '', 'root']],
+				content: '🌅',
+				created_at: Math.floor(Date.now() / 1000),
+			});
+			await relay.publish(bootEvent);
+		}
 		//繋ぎっぱなしにする
 	};
 	const sub = relay.subscribe(
