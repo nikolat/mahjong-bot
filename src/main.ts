@@ -88,13 +88,36 @@ const main = async () => {
 	const oneose = async () => {
 		if (!isDebug) {
 			//起きた報告
-			const bootEvent = (signermap.get(pubkey_jongbari) as Signer).finishEvent({
-				kind: 42,
-				tags: [['e', 'c8d5c2709a5670d6f621ac8020ac3e4fc3057a4961a15319f7c0818309407723', '', 'root']],
-				content: '🌅',
-				created_at: Math.floor(Date.now() / 1000),
-			});
-			await relay.publish(bootEvent);
+			const filters2 = [
+				{
+					kinds: [42],
+					'#p': [(signermap.get(pubkey_jongbari) as Signer).getPublicKey()],
+					limit: 1
+				}
+			];
+			const onevent2 = async (ev2: NostrEvent) => {
+				const bootEvent = (signermap.get(pubkey_jongbari) as Signer).finishEvent({
+					kind: 7,
+					tags: getTagsFav(ev2),
+					content: '🌅',
+					created_at: Math.floor(Date.now() / 1000),
+				});
+				await relay.publish(bootEvent);
+			};
+			const oneose2 = () => {
+				sub2.close();
+			};
+			const sub2 = relay.subscribe(
+				filters2,
+				{ onevent: onevent2, oneose: oneose2 }
+			);
+			const getTagsFav = (event: NostrEvent): string[][] => {
+				const tagsFav: string[][] = event.tags.filter(tag => tag.length >= 2 && (tag[0] === 'e' || (tag[0] === 'p' && tag[1] !== event.pubkey)));
+				tagsFav.push(['e', event.id, '', '']);
+				tagsFav.push(['p', event.pubkey, '']);
+				tagsFav.push(['k', String(event.kind)]);
+				return tagsFav;
+			};
 		}
 		//繋ぎっぱなしにする
 	};
