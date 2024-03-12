@@ -6,8 +6,9 @@ import {
 	getPublicKey,
 	type NostrEvent,
 	type VerifiedEvent,
+	useWebSocketImplementation,
 } from 'nostr-tools';
-import 'websocket-polyfill';
+useWebSocketImplementation(require('ws'));
 import { Mode, Signer } from './utils';
 import { relayUrl, getNsecs, isDebug } from './config';
 import { getResponseEvent } from './response';
