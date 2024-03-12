@@ -103,7 +103,11 @@ const main = async () => {
 					content: '🌅',
 					created_at: Math.floor(Date.now() / 1000),
 				});
-				await relay.publish(bootEvent);
+				try {
+					await relay.publish(bootEvent);
+				} catch (error) {
+					console.warn(error);
+				}
 			};
 			const oneose2 = () => {
 				sub2.close();
