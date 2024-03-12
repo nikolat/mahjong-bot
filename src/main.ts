@@ -96,20 +96,21 @@ const main = async () => {
 					limit: 1
 				}
 			];
+			let bootEvent: VerifiedEvent;
 			const onevent2 = async (ev2: NostrEvent) => {
-				const bootEvent = (signermap.get(pubkey_jongbari) as Signer).finishEvent({
+				bootEvent = (signermap.get(pubkey_jongbari) as Signer).finishEvent({
 					kind: 7,
 					tags: getTagsFav(ev2),
 					content: '🌅',
 					created_at: Math.floor(Date.now() / 1000),
 				});
+			};
+			const oneose2 = async () => {
 				try {
 					await relay.publish(bootEvent);
 				} catch (error) {
 					console.warn(error);
 				}
-			};
-			const oneose2 = () => {
 				sub2.close();
 			};
 			const sub2 = relay.subscribe(
