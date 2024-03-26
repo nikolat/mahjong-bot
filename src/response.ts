@@ -30,7 +30,7 @@ const zapTest = async (event: NostrEvent, signer: Signer, relay: Relay): Promise
 	const walletSeckey = searchParams.get('secret');
 
 	const evKind0 = await getKind0(relay, event);
-	const zapEndpoint = nip57.getZapEndpoint(evKind0);
+	const zapEndpoint = await nip57.getZapEndpoint(evKind0);
 	if (walletPubkey.length === 0 || walletRelay === null || walletSeckey === null || zapEndpoint === null) {
 		return;
 	}
