@@ -58,7 +58,7 @@ const main = async () => {
 			let rs: VerifiedEvent[] | null;
 			const mode = pubkey === pubkey_jongbari ? Mode.Server : Mode.Client
 			try {
-				rs = await getResponseEvent(ev, signermap.get(pubkey) as Signer, mode);
+				rs = await getResponseEvent(ev, signermap.get(pubkey) as Signer, mode, relay);
 			} catch (error) {
 				if (error instanceof Error) {
 					console.error(error.message);

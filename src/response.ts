@@ -1,17 +1,94 @@
-import { type EventTemplate, type VerifiedEvent, type Event as NostrEvent, nip19 } from 'nostr-tools';
+import { type EventTemplate, type VerifiedEvent, type Event as NostrEvent, nip19, nip47, nip57, Relay } from 'nostr-tools';
 import { Mode, Signer } from './utils';
+import { hexToBytes } from '@noble/hashes/utils';
 
-export const getResponseEvent = async (requestEvent: NostrEvent, signer: Signer, mode: Mode): Promise<VerifiedEvent[] | null> => {
+export const getResponseEvent = async (requestEvent: NostrEvent, signer: Signer, mode: Mode, relay: Relay): Promise<VerifiedEvent[] | null> => {
 	if (requestEvent.pubkey === signer.getPublicKey()) {
 		//自分自身の投稿には反応しない
 		return null;
 	}
 	const res = await selectResponse(requestEvent, mode);
 	if (res === null) {
+		const zapAllowedNpubs = ['npub1dv9xpnlnajj69vjstn9n7ufnmppzq3wtaaq085kxrz0mpw2jul2qjy6uhz'];
+		if (zapAllowedNpubs.includes(nip19.npubEncode(requestEvent.pubkey)) && /^zap$/i.test(requestEvent.content) ) {
+			await zapTest(requestEvent, signer, relay);
+		}
 		//反応しないことを選択
 		return null;
 	}
 	return res.map(ev => signer.finishEvent(ev));
+};
+
+const zapTest = async (event: NostrEvent, signer: Signer, relay: Relay): Promise<void> => {
+	const wc = process.env.NOSTR_WALLET_CONNECT;
+	if (wc === undefined) {
+		throw Error('NOSTR_WALLET_CONNECT is undefined');
+	}
+	const { pathname, hostname, searchParams } = new URL(wc);
+	const walletPubkey = pathname || hostname;
+	const walletRelay = searchParams.get('relay');
+	const walletSeckey = searchParams.get('secret');
+
+	const evKind0 = await getKind0(relay, event);
+	const zapEndpoint = nip57.getZapEndpoint(evKind0);
+	if (walletPubkey.length === 0 || walletRelay === null || walletSeckey === null || zapEndpoint === null) {
+		return;
+	}
+
+	const sats = 3;
+	const zapComment = 'Zap!';
+
+	const amount = sats * 1000;
+	const zapRequest = nip57.makeZapRequest({
+		profile: event.pubkey,
+		event: event.id,
+		amount,
+		comment: zapComment,
+		relays: [relay.url],
+	});
+	const zapRequestEvent = signer.finishEvent(zapRequest);
+	const encoded = encodeURI(JSON.stringify(zapRequestEvent));
+
+	const url = `${zapEndpoint}?amount=${amount}&nostr=${encoded}`;
+
+	const response = await fetch(url);
+	if (!response.ok) {
+		return;
+	}
+	const { pr: invoice } = await response.json();
+
+	const ev = await nip47.makeNwcRequestEvent(walletPubkey, hexToBytes(walletSeckey), invoice);
+	const wRelay = await Relay.connect(walletRelay);
+	try {
+		await wRelay.publish(ev);
+	} catch (error) {
+		console.warn(error);
+	}
+	wRelay.close();
+};
+
+const getKind0 = async (relay: Relay, event: NostrEvent): Promise<NostrEvent> => {
+	return new Promise(async (resolve) => {
+		let r: NostrEvent;
+		//イベントの監視
+		const filters = [
+			{
+				kinds: [0],
+				authors: [event.pubkey],
+			}
+		];
+		const onevent = async (ev: NostrEvent) => {
+			r = ev;
+		};
+		const oneose = async () => {
+			sub.close();
+			resolve(r);
+		};
+		const sub = relay.subscribe(
+			filters,
+			{ onevent, oneose }
+		);
+	});
 };
 
 const selectResponse = async (event: NostrEvent, mode: Mode): Promise<EventTemplate[] | null> => {
