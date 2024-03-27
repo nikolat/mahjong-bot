@@ -5,7 +5,8 @@ export const getNsecs = (): (string | undefined)[] => {
 	const nsec_rinrin = process.env.NOSTR_PRIVATE_KEY_RINRIN;
 	const nsec_chunchun = process.env.NOSTR_PRIVATE_KEY_CHUNCHUN;
 	const nsec_whanwhan = process.env.NOSTR_PRIVATE_KEY_WHANWHAN;
-	return [nsec_jongbari, nsec_rinrin, nsec_chunchun, nsec_whanwhan];
+	const nsec_unyu = process.env.NOSTR_PRIVATE_KEY_UNYU;
+	return [nsec_jongbari, nsec_rinrin, nsec_chunchun, nsec_whanwhan, nsec_unyu];
 };
 
 export const isDebug = false;

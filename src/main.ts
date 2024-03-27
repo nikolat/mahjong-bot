@@ -4,6 +4,7 @@ import {
 	validateEvent,
 	Relay,
 	getPublicKey,
+	type Filter,
 	type NostrEvent,
 	type VerifiedEvent,
 	useWebSocketImplementation,
@@ -19,7 +20,7 @@ if (!isDebug)
 const main = async () => {
 	//署名用秘密鍵を準備
 	const nsecs: (string | undefined)[] = getNsecs();
-	const [nsec_jongbari, nsec_rinrin, nsec_chunchun, nsec_whanwhan] = nsecs;
+	const [nsec_jongbari, nsec_rinrin, nsec_chunchun, nsec_whanwhan, nsec_unyu] = nsecs;
 	if (nsecs.includes(undefined)) {
 		throw Error('NOSTR_PRIVATE_KEY is undefined');
 	}
@@ -34,17 +35,24 @@ const main = async () => {
 		signermap.set(signer.getPublicKey(), signer);
 	}
 	const pubkey_jongbari = getPublicKey(nip19.decode(nsec_jongbari as string).data as Uint8Array);
+	const pubkey_unyu = getPublicKey(nip19.decode(nsec_unyu as string).data as Uint8Array);
 
 	//リレーに接続
 	const relay = await Relay.connect(relayUrl);
 	console.info(`connected to ${relay.url}`);
 
 	//イベントの監視
-	const filters = [
+	const now = Math.floor(Date.now() / 1000);
+	const filters: Filter[] = [
 		{
 			kinds: [42],
 			'#p': Array.from(signermap.keys()),
-			since: Math.floor(Date.now() / 1000)
+			since: now
+		},
+		{
+			kinds: [1, 42],
+			'#p': [pubkey_unyu],
+			since: now
 		}
 	];
 	const onevent = async (ev: NostrEvent) => {
@@ -56,7 +64,9 @@ const main = async () => {
 		let responseEvents: VerifiedEvent[] = [];
 		for (const pubkey of ev.tags.filter(tag => tag.length >= 2 && tag[0] === 'p' && Array.from(signermap.values()).map(signer => signer.getPublicKey()).includes(tag[1])).map(tag => tag[1])) {
 			let rs: VerifiedEvent[] | null;
-			const mode = pubkey === pubkey_jongbari ? Mode.Server : Mode.Client
+			const mode = pubkey === pubkey_jongbari ? Mode.Server
+				: pubkey === pubkey_unyu ? Mode.Unyu
+				: Mode.Client
 			try {
 				rs = await getResponseEvent(ev, signermap.get(pubkey) as Signer, mode, relay);
 			} catch (error) {

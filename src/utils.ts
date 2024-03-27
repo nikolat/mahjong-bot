@@ -5,6 +5,7 @@ import { type EventTemplate, finalizeEvent, getPublicKey } from 'nostr-tools';
 export const enum Mode {
 	Server,
 	Client,
+	Unyu,
 };
 
 export const buffer = async (readable: Readable) => {

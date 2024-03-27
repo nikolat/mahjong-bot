@@ -1,4 +1,4 @@
-import { type EventTemplate, type VerifiedEvent, type Event as NostrEvent, nip19, nip47, nip57, Relay } from 'nostr-tools';
+import { type EventTemplate, type VerifiedEvent, type Event as NostrEvent, type Filter, Relay, nip19, nip47, nip57 } from 'nostr-tools';
 import { Mode, Signer } from './utils';
 import { hexToBytes } from '@noble/hashes/utils';
 
@@ -7,11 +7,11 @@ export const getResponseEvent = async (requestEvent: NostrEvent, signer: Signer,
 		//自分自身の投稿には反応しない
 		return null;
 	}
-	const res = await selectResponse(requestEvent, mode);
+	const res = await selectResponse(requestEvent, mode, signer, relay);
 	if (res === null) {
 		const zapAllowedNpubs = ['npub1dv9xpnlnajj69vjstn9n7ufnmppzq3wtaaq085kxrz0mpw2jul2qjy6uhz'];
 		if (zapAllowedNpubs.includes(nip19.npubEncode(requestEvent.pubkey)) && /zap/i.test(requestEvent.content) ) {
-			await zapTest(requestEvent, signer, relay);
+			await zapByNIP47(requestEvent, signer, relay, 1, 'Zap test');
 		}
 		//反応しないことを選択
 		return null;
@@ -19,7 +19,11 @@ export const getResponseEvent = async (requestEvent: NostrEvent, signer: Signer,
 	return res.map(ev => signer.finishEvent(ev));
 };
 
-const zapTest = async (event: NostrEvent, signer: Signer, relay: Relay): Promise<void> => {
+const ohayou_zap = async (event: NostrEvent, signer: Signer, relay: Relay): Promise<void> => {
+	await zapByNIP47(event, signer, relay, 3, any(['早起きのご褒美やで', '健康的でええな', 'みんなには内緒やで']));
+};
+
+const zapByNIP47 = async (event: NostrEvent, signer: Signer, relay: Relay, sats: number, zapComment: string): Promise<void> => {
 	const wc = process.env.NOSTR_WALLET_CONNECT;
 	if (wc === undefined) {
 		throw Error('NOSTR_WALLET_CONNECT is undefined');
@@ -35,8 +39,11 @@ const zapTest = async (event: NostrEvent, signer: Signer, relay: Relay): Promise
 		return;
 	}
 
-	const sats = 3;
-	const zapComment = 'Zap!';
+	const lastZap = await getLastZap(relay, walletPubkey, event.pubkey);
+	console.log('[lastZap]', lastZap);
+	if (lastZap !== undefined && Math.floor(Date.now() / 1000) - lastZap.created_at < 60 * 60 * 3) {//3時間以内にZapをもらっている
+		return;
+	}
 
 	const amount = sats * 1000;
 	const zapRequest = nip57.makeZapRequest({
@@ -70,7 +77,6 @@ const zapTest = async (event: NostrEvent, signer: Signer, relay: Relay): Promise
 const getKind0 = async (relay: Relay, event: NostrEvent): Promise<NostrEvent> => {
 	return new Promise(async (resolve) => {
 		let r: NostrEvent;
-		//イベントの監視
 		const filters = [
 			{
 				kinds: [0],
@@ -91,11 +97,36 @@ const getKind0 = async (relay: Relay, event: NostrEvent): Promise<NostrEvent> =>
 	});
 };
 
-const selectResponse = async (event: NostrEvent, mode: Mode): Promise<EventTemplate[] | null> => {
+const getLastZap = async (relay: Relay, walletPubkey: string, targetPubkey: string): Promise<NostrEvent | undefined> => {
+	return new Promise(async (resolve) => {
+		let r: NostrEvent | undefined;
+		const filters: Filter[] = [
+			{
+				kinds: [23195],
+				authors: [walletPubkey],
+				'#p': [targetPubkey],
+				limit: 1
+			}
+		];
+		const onevent = async (ev: NostrEvent) => {
+			r = ev;
+		};
+		const oneose = async () => {
+			sub.close();
+			resolve(r);
+		};
+		const sub = relay.subscribe(
+			filters,
+			{ onevent, oneose }
+		);
+	});
+};
+
+const selectResponse = async (event: NostrEvent, mode: Mode, signer: Signer, relay: Relay): Promise<EventTemplate[] | null> => {
 	if (!isAllowedToPost(event)) {
 		return null;
 	}
-	const res = await mode_select(event, mode);
+	const res = await mode_select(event, mode, signer, relay);
 	if (res === null) {
 		return null;
 	}
@@ -129,7 +160,7 @@ const isAllowedToPost = (event: NostrEvent) => {
 	throw new TypeError(`kind ${event.kind} is not supported`);
 };
 
-const getResmap = (mode: Mode): [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => [string, string[][]][] | null][] => {
+const getResmap = (mode: Mode): [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp, signer: Signer, relay: Relay) => [string, string[][]][] | null | Promise<null>][] => {
 	const resmapServer: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => [string, string[][]][] | null][] = [
 		[/ping$/, res_ping],
 		[/gamestart$/, res_s_gamestart],
@@ -146,27 +177,37 @@ const getResmap = (mode: Mode): [RegExp, (event: NostrEvent, mode: Mode, regstr:
 		[/NOTIFY\stsumo\snostr:npub1\w{58}\s\d+\s([0-9][mpsz]).+GET\ssutehai\?$/s, res_c_sutehai],
 		[/GET\snaku\?\s(ron|kan|pon|chi)$/s, res_c_naku],
 	];
+	const resmapUnyu: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp, signer: Signer, relay: Relay) => Promise<null>][] = [
+		[/おはよ/, res_ohayo],
+	];
 	switch (mode) {
 		case Mode.Server:
 			return resmapServer;
 		case Mode.Client:
 			return resmapClient;
+		case Mode.Unyu:
+			return resmapUnyu;
 		default:
 			throw new TypeError(`unknown mode: ${mode}`);
 	}
 };
 
-const mode_select = async (event: NostrEvent, mode: Mode): Promise<[string, number, string[][]][] | null> => {
+const mode_select = async (event: NostrEvent, mode: Mode, signer: Signer, relay: Relay): Promise<[string, number, string[][]][] | null> => {
 	const resmap = getResmap(mode);
 	for (const [reg, func] of resmap) {
 		if (reg.test(event.content)) {
-			const res = await func(event, mode, reg);
+			const res = await func(event, mode, reg, signer, relay);
 			if (res === null) {
 				return null;
 			}
 			return res.map(r => [r[0], event.kind, r[1]]);
 		} 
 	}
+	return null;
+};
+
+const res_ohayo = async (event: NostrEvent, mode: Mode, regstr: RegExp, signer: Signer, relay: Relay): Promise<null> => {
+	await ohayou_zap(event, signer, relay);
 	return null;
 };
 
