@@ -39,7 +39,7 @@ const zapByNIP47 = async (event: NostrEvent, signer: Signer, relay: Relay, sats:
 		return;
 	}
 
-	const lastZap = await getLastZap(walletRelay, walletPubkey, event.pubkey);
+	const lastZap = await getLastZap(relay, walletPubkey, event.pubkey);
 	console.log('[lastZap]', lastZap);
 	if (lastZap !== undefined && Math.floor(Date.now() / 1000) - lastZap.created_at < 60 * 60 * 3) {//3時間以内にZapをもらっている
 		return;
@@ -97,8 +97,7 @@ const getKind0 = async (relay: Relay, event: NostrEvent): Promise<NostrEvent> =>
 	});
 };
 
-const getLastZap = async (walletRelay: string, walletPubkey: string, targetPubkey: string): Promise<NostrEvent | undefined> => {
-	const wRelay = await Relay.connect(walletRelay);
+const getLastZap = async (relay: Relay, walletPubkey: string, targetPubkey: string): Promise<NostrEvent | undefined> => {
 	return new Promise(async (resolve) => {
 		let r: NostrEvent | undefined;
 		const filters: Filter[] = [
@@ -114,10 +113,9 @@ const getLastZap = async (walletRelay: string, walletPubkey: string, targetPubke
 		};
 		const oneose = async () => {
 			sub.close();
-			wRelay.close();
 			resolve(r);
 		};
-		const sub = wRelay.subscribe(
+		const sub = relay.subscribe(
 			filters,
 			{ onevent, oneose }
 		);
