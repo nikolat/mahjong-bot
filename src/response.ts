@@ -20,7 +20,10 @@ export const getResponseEvent = async (requestEvent: NostrEvent, signer: Signer,
 };
 
 const ohayou_zap = async (event: NostrEvent, signer: Signer, relay: Relay): Promise<void> => {
-	await zapByNIP47(event, signer, relay, 3, any(['早起きのご褒美やで', '健康的でええな', 'みんなには内緒やで']));
+	const h = ((new Date()).getHours() + 9) % 24;
+	if (5 <= h && h < 8) {
+		await zapByNIP47(event, signer, relay, 3, any(['早起きのご褒美やで', '健康的でええな', 'みんなには内緒やで']));
+	}
 };
 
 const zapByNIP47 = async (event: NostrEvent, signer: Signer, relay: Relay, sats: number, zapComment: string): Promise<void> => {
