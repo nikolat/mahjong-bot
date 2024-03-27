@@ -102,7 +102,7 @@ const getLastZap = async (relay: Relay, walletPubkey: string, targetPubkey: stri
 		let r: NostrEvent | undefined;
 		const filters: Filter[] = [
 			{
-				kinds: [23195],
+				kinds: [9735],
 				authors: [walletPubkey],
 				'#p': [targetPubkey],
 				limit: 1
