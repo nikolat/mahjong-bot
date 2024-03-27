@@ -144,6 +144,7 @@ const selectResponse = async (event: NostrEvent, mode: Mode, signer: Signer, rel
 const isAllowedToPost = (event: NostrEvent) => {
 	const allowedChannel: string[] = [
 		'c8d5c2709a5670d6f621ac8020ac3e4fc3057a4961a15319f7c0818309407723',//Nostr麻雀開発部
+		'be8e52c0c70ec5390779202b27d9d6fc7286d0e9a2bc91c001d6838d40bafa4a',//Nostr伺か部
 	];
 	if (event.kind === 1) {
 		return true;
