@@ -2,7 +2,7 @@ import { page } from './page';
 import {
 	nip19,
 	validateEvent,
-	Relay,
+	SimplePool,
 	getPublicKey,
 	type Filter,
 	type NostrEvent,
@@ -38,8 +38,7 @@ const main = async () => {
 	const pubkey_unyu = getPublicKey(nip19.decode(nsec_unyu as string).data as Uint8Array);
 
 	//リレーに接続
-	const relay = await Relay.connect(relayUrl);
-	console.info(`connected to ${relay.url}`);
+	const pool = new SimplePool();
 
 	//イベントの監視
 	const now = Math.floor(Date.now() / 1000);
@@ -68,7 +67,7 @@ const main = async () => {
 				: pubkey === pubkey_unyu ? Mode.Unyu
 				: Mode.Client
 			try {
-				rs = await getResponseEvent(ev, signermap.get(pubkey) as Signer, mode, relay);
+				rs = await getResponseEvent(ev, signermap.get(pubkey) as Signer, mode, pool);
 			} catch (error) {
 				if (error instanceof Error) {
 					console.error(error.message);
@@ -90,7 +89,7 @@ const main = async () => {
 		if (responseEvents.length > 0) {
 			const posts: Promise<string>[] = [];
 			for (const responseEvent of responseEvents) {
-				posts.push(relay.publish(responseEvent));
+				posts.concat(pool.publish(relayUrl, responseEvent));
 				console.info(`RES from ${nip19.npubEncode(responseEvent.pubkey)}\n${responseEvent.content}`);
 			}
 			await Promise.all(posts);
@@ -117,13 +116,14 @@ const main = async () => {
 			};
 			const oneose2 = async () => {
 				try {
-					await relay.publish(bootEvent);
+					await Promise.all(pool.publish(relayUrl, bootEvent));
 				} catch (error) {
 					console.warn(error);
 				}
 				sub2.close();
 			};
-			const sub2 = relay.subscribe(
+			const sub2 = pool.subscribeMany(
+				relayUrl,
 				filters2,
 				{ onevent: onevent2, oneose: oneose2 }
 			);
@@ -137,7 +137,9 @@ const main = async () => {
 		}
 		//繋ぎっぱなしにする
 	};
-	const sub = relay.subscribe(
+
+	const sub = pool.subscribeMany(
+		relayUrl,
 		filters,
 		{ onevent, oneose }
 	);

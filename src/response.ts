@@ -1,17 +1,18 @@
-import { type EventTemplate, type VerifiedEvent, type Event as NostrEvent, type Filter, Relay, nip19, nip47, nip57 } from 'nostr-tools';
+import { type EventTemplate, type VerifiedEvent, type Event as NostrEvent, type Filter, Relay, nip19, nip47, nip57, SimplePool } from 'nostr-tools';
 import { Mode, Signer } from './utils';
 import { hexToBytes } from '@noble/hashes/utils';
+import { relayUrl } from './config';
 
-export const getResponseEvent = async (requestEvent: NostrEvent, signer: Signer, mode: Mode, relay: Relay): Promise<VerifiedEvent[] | null> => {
+export const getResponseEvent = async (requestEvent: NostrEvent, signer: Signer, mode: Mode, pool: SimplePool): Promise<VerifiedEvent[] | null> => {
 	if (requestEvent.pubkey === signer.getPublicKey()) {
 		//自分自身の投稿には反応しない
 		return null;
 	}
-	const res = await selectResponse(requestEvent, mode, signer, relay);
+	const res = await selectResponse(requestEvent, mode, signer, pool);
 	if (res === null) {
 		const zapAllowedNpubs = ['npub1dv9xpnlnajj69vjstn9n7ufnmppzq3wtaaq085kxrz0mpw2jul2qjy6uhz'];
 		if (zapAllowedNpubs.includes(nip19.npubEncode(requestEvent.pubkey)) && /zap/i.test(requestEvent.content) ) {
-			await zapByNIP47(requestEvent, signer, relay, 1, 'Zap test');
+			await zapByNIP47(requestEvent, signer, pool, 1, 'Zap test');
 		}
 		//反応しないことを選択
 		return null;
@@ -19,14 +20,14 @@ export const getResponseEvent = async (requestEvent: NostrEvent, signer: Signer,
 	return res.map(ev => signer.finishEvent(ev));
 };
 
-const ohayou_zap = async (event: NostrEvent, signer: Signer, relay: Relay): Promise<void> => {
+const ohayou_zap = async (event: NostrEvent, signer: Signer, pool: SimplePool): Promise<void> => {
 	const h = ((new Date()).getHours() + 9) % 24;
 	if (5 <= h && h < 8) {
-		await zapByNIP47(event, signer, relay, 3, any(['早起きのご褒美やで', '健康的でええな', 'みんなには内緒やで']));
+		await zapByNIP47(event, signer, pool, 3, any(['早起きのご褒美やで', '健康的でええな', 'みんなには内緒やで']));
 	}
 };
 
-const zapByNIP47 = async (event: NostrEvent, signer: Signer, relay: Relay, sats: number, zapComment: string): Promise<void> => {
+const zapByNIP47 = async (event: NostrEvent, signer: Signer, pool: SimplePool, sats: number, zapComment: string): Promise<void> => {
 	const wc = process.env.NOSTR_WALLET_CONNECT;
 	if (wc === undefined) {
 		throw Error('NOSTR_WALLET_CONNECT is undefined');
@@ -36,7 +37,7 @@ const zapByNIP47 = async (event: NostrEvent, signer: Signer, relay: Relay, sats:
 	const walletRelay = searchParams.get('relay');
 	const walletSeckey = searchParams.get('secret');
 
-	const evKind0 = await getKind0(relay, event);
+	const evKind0 = await getKind0(pool, event);
 	const zapEndpoint = await nip57.getZapEndpoint(evKind0);
 	if (walletPubkey.length === 0 || walletRelay === null || walletSeckey === null || zapEndpoint === null) {
 		return;
@@ -54,7 +55,7 @@ const zapByNIP47 = async (event: NostrEvent, signer: Signer, relay: Relay, sats:
 		event: event.id,
 		amount,
 		comment: zapComment,
-		relays: [relay.url],
+		relays: relayUrl,
 	});
 	const zapRequestEvent = signer.finishEvent(zapRequest);
 	const encoded = encodeURI(JSON.stringify(zapRequestEvent));
@@ -77,7 +78,7 @@ const zapByNIP47 = async (event: NostrEvent, signer: Signer, relay: Relay, sats:
 	wRelay.close();
 };
 
-const getKind0 = async (relay: Relay, event: NostrEvent): Promise<NostrEvent> => {
+const getKind0 = async (pool: SimplePool, event: NostrEvent): Promise<NostrEvent> => {
 	return new Promise(async (resolve) => {
 		let r: NostrEvent;
 		const filters = [
@@ -87,13 +88,16 @@ const getKind0 = async (relay: Relay, event: NostrEvent): Promise<NostrEvent> =>
 			}
 		];
 		const onevent = async (ev: NostrEvent) => {
-			r = ev;
+			if (r === undefined || r.created_at < ev.created_at) {
+				r = ev;
+			}
 		};
 		const oneose = async () => {
 			sub.close();
 			resolve(r);
 		};
-		const sub = relay.subscribe(
+		const sub = pool.subscribeMany(
+			relayUrl,
 			filters,
 			{ onevent, oneose }
 		);
@@ -127,11 +131,11 @@ const getLastZap = async (targetPubkey: string): Promise<NostrEvent | undefined>
 	});
 };
 
-const selectResponse = async (event: NostrEvent, mode: Mode, signer: Signer, relay: Relay): Promise<EventTemplate[] | null> => {
+const selectResponse = async (event: NostrEvent, mode: Mode, signer: Signer, pool: SimplePool): Promise<EventTemplate[] | null> => {
 	if (!isAllowedToPost(event)) {
 		return null;
 	}
-	const res = await mode_select(event, mode, signer, relay);
+	const res = await mode_select(event, mode, signer, pool);
 	if (res === null) {
 		return null;
 	}
@@ -166,7 +170,7 @@ const isAllowedToPost = (event: NostrEvent) => {
 	throw new TypeError(`kind ${event.kind} is not supported`);
 };
 
-const getResmap = (mode: Mode): [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp, signer: Signer, relay: Relay) => [string, string[][]][] | null | Promise<null>][] => {
+const getResmap = (mode: Mode): [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp, signer: Signer, pool: SimplePool) => [string, string[][]][] | null | Promise<null>][] => {
 	const resmapServer: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => [string, string[][]][] | null][] = [
 		[/ping$/, res_ping],
 		[/gamestart$/, res_s_gamestart],
@@ -183,7 +187,7 @@ const getResmap = (mode: Mode): [RegExp, (event: NostrEvent, mode: Mode, regstr:
 		[/NOTIFY\stsumo\snostr:npub1\w{58}\s\d+\s([0-9][mpsz]).+GET\ssutehai\?$/s, res_c_sutehai],
 		[/GET\snaku\?\s(ron|kan|pon|chi)$/s, res_c_naku],
 	];
-	const resmapUnyu: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp, signer: Signer, relay: Relay) => Promise<null>][] = [
+	const resmapUnyu: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp, signer: Signer, pool: SimplePool) => Promise<null>][] = [
 		[/おはよ/, res_ohayo],
 	];
 	switch (mode) {
@@ -198,11 +202,11 @@ const getResmap = (mode: Mode): [RegExp, (event: NostrEvent, mode: Mode, regstr:
 	}
 };
 
-const mode_select = async (event: NostrEvent, mode: Mode, signer: Signer, relay: Relay): Promise<[string, number, string[][]][] | null> => {
+const mode_select = async (event: NostrEvent, mode: Mode, signer: Signer, pool: SimplePool): Promise<[string, number, string[][]][] | null> => {
 	const resmap = getResmap(mode);
 	for (const [reg, func] of resmap) {
 		if (reg.test(event.content)) {
-			const res = await func(event, mode, reg, signer, relay);
+			const res = await func(event, mode, reg, signer, pool);
 			if (res === null) {
 				return null;
 			}
@@ -212,8 +216,8 @@ const mode_select = async (event: NostrEvent, mode: Mode, signer: Signer, relay:
 	return null;
 };
 
-const res_ohayo = async (event: NostrEvent, mode: Mode, regstr: RegExp, signer: Signer, relay: Relay): Promise<null> => {
-	await ohayou_zap(event, signer, relay);
+const res_ohayo = async (event: NostrEvent, mode: Mode, regstr: RegExp, signer: Signer, pool: SimplePool): Promise<null> => {
+	await ohayou_zap(event, signer, pool);
 	return null;
 };
 

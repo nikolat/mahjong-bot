@@ -1,4 +1,9 @@
-export const relayUrl = 'wss://relay.nostr.wirednet.jp';
+export const relayUrl = [
+	'wss://relay-jp.nostr.wirednet.jp',
+	'wss://relay.nostr.wirednet.jp',
+	'wss://yabu.me',
+	'wss://nostr-relay.nokotaro.com',
+];
 
 export const getNsecs = (): (string | undefined)[] => {
 	const nsec_jongbari = process.env.NOSTR_PRIVATE_KEY_JONGBARI;
