@@ -44,9 +44,12 @@ const zapByNIP47 = async (event: NostrEvent, signer: Signer, pool: SimplePool, s
 	}
 
 	const lastZap = await getLastZap(event.pubkey);
-	console.log('[lastZap]', lastZap);
 	if (lastZap !== undefined && Math.floor(Date.now() / 1000) - lastZap.created_at < 60 * 10) {//10分以内に誰かからZapをもらっている
-		return;
+		const evKind9734 = JSON.parse(lastZap.tags.find(tag => tag[0] === 'description')?.at(1) ?? '{}');
+		if (evKind9734.pubkey === signer.getPublicKey()) {//自分からのZap
+			console.log('[lastZap]', evKind9734);
+			return;
+		}
 	}
 
 	const amount = sats * 1000;
