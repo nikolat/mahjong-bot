@@ -100,11 +100,8 @@ const main = async () => {
 				posts.concat(pool.publish(relayUrl, responseEvent));
 				console.info(`RES from ${nip19.npubEncode(responseEvent.pubkey)}\n${responseEvent.content}`);
 			}
-			try {
-				await Promise.all(posts);
-			} catch (error) {
-				console.warn(error);
-			}
+			const results = await Promise.allSettled(posts);
+			console.log(results);
 		}
 	};
 	const oneose = async () => {
@@ -127,11 +124,8 @@ const main = async () => {
 				});
 			};
 			const oneose2 = async () => {
-				try {
-					await Promise.all(pool.publish(relayUrl, bootEvent));
-				} catch (error) {
-					console.warn(error);
-				}
+				const results = await Promise.allSettled(pool.publish(relayUrl, bootEvent));
+				console.log(results);
 				sub2.close();
 			};
 			const sub2 = pool.subscribeMany(
