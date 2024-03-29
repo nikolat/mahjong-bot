@@ -100,7 +100,11 @@ const main = async () => {
 				posts.concat(pool.publish(relayUrl, responseEvent));
 				console.info(`RES from ${nip19.npubEncode(responseEvent.pubkey)}\n${responseEvent.content}`);
 			}
-			await Promise.all(posts);
+			try {
+				await Promise.all(posts);
+			} catch (error) {
+				console.warn(error);
+			}
 		}
 	};
 	const oneose = async () => {
