@@ -35,6 +35,9 @@ const main = async () => {
 		signermap.set(signer.getPublicKey(), signer);
 	}
 	const pubkey_jongbari = getPublicKey(nip19.decode(nsec_jongbari as string).data as Uint8Array);
+	const pubkey_rinrin = getPublicKey(nip19.decode(nsec_rinrin as string).data as Uint8Array);
+	const pubkey_chunchun = getPublicKey(nip19.decode(nsec_chunchun as string).data as Uint8Array);
+	const pubkey_whanwhan = getPublicKey(nip19.decode(nsec_whanwhan as string).data as Uint8Array);
 	const pubkey_unyu = getPublicKey(nip19.decode(nsec_unyu as string).data as Uint8Array);
 
 	//リレーに接続
@@ -43,14 +46,14 @@ const main = async () => {
 	//イベントの監視
 	const now = Math.floor(Date.now() / 1000);
 	const filters: Filter[] = [
-		{
-			kinds: [42],
-			'#p': Array.from(signermap.keys()),
-			since: now
-		},
+//		{
+//			kinds: [42],
+//			'#p': Array.from(signermap.keys()),
+//			since: now
+//		},
 		{
 			kinds: [1, 42],
-			'#p': [pubkey_unyu],
+//			'#p': [pubkey_unyu],
 			since: now
 		}
 	];
@@ -61,11 +64,16 @@ const main = async () => {
 		}
 		//出力イベントを取得
 		let responseEvents: VerifiedEvent[] = [];
-		for (const pubkey of ev.tags.filter(tag => tag.length >= 2 && tag[0] === 'p' && Array.from(signermap.values()).map(signer => signer.getPublicKey()).includes(tag[1])).map(tag => tag[1])) {
+		const targetPubkeys = new Set(ev.tags.filter(tag => tag.length >= 2 && tag[0] === 'p' && Array.from(signermap.values()).map(signer => signer.getPublicKey()).includes(tag[1])).map(tag => tag[1]));
+		if (/^うにゅう、/.test(ev.content)) {
+			targetPubkeys.add(pubkey_unyu);
+		}
+		for (const pubkey of targetPubkeys) {
 			let rs: VerifiedEvent[] | null;
 			const mode = pubkey === pubkey_jongbari ? Mode.Server
+				: [pubkey_rinrin, pubkey_chunchun, pubkey_whanwhan].includes(pubkey) ? Mode.Client
 				: pubkey === pubkey_unyu ? Mode.Unyu
-				: Mode.Client
+				: Mode.Unyu
 			try {
 				rs = await getResponseEvent(ev, signermap.get(pubkey) as Signer, mode, pool);
 			} catch (error) {
