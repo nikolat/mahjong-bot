@@ -1,7 +1,5 @@
 export const relayUrl = [
-	'wss://relay-jp.nostr.wirednet.jp',
 	'wss://relay.nostr.wirednet.jp',
-	'wss://yabu.me',
 	'wss://nostr-relay.nokotaro.com',
 ];
 
