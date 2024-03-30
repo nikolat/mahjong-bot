@@ -10,10 +10,10 @@ export const getResponseEvent = async (requestEvent: NostrEvent, signer: Signer,
 	}
 	const res = await selectResponse(requestEvent, mode, signer, pool);
 	if (res === null) {
-		const zapAllowedNpubs = ['npub1dv9xpnlnajj69vjstn9n7ufnmppzq3wtaaq085kxrz0mpw2jul2qjy6uhz'];
-		if (zapAllowedNpubs.includes(nip19.npubEncode(requestEvent.pubkey)) && /zap/i.test(requestEvent.content) ) {
-			await zapByNIP47(requestEvent, signer, pool, 1, 'Zap test');
-		}
+//		const zapAllowedNpubs = ['npub1dv9xpnlnajj69vjstn9n7ufnmppzq3wtaaq085kxrz0mpw2jul2qjy6uhz'];
+//		if (zapAllowedNpubs.includes(nip19.npubEncode(requestEvent.pubkey)) && /zap/i.test(requestEvent.content) ) {
+//			await zapByNIP47(requestEvent, signer, pool, 1, 'Zap test');
+//		}
 		//反応しないことを選択
 		return null;
 	}

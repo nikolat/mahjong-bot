@@ -20,7 +20,7 @@ if (!isDebug)
 const main = async () => {
 	//署名用秘密鍵を準備
 	const nsecs: (string | undefined)[] = getNsecs();
-	const [nsec_jongbari, nsec_rinrin, nsec_chunchun, nsec_whanwhan, nsec_unyu] = nsecs;
+	const [nsec_jongbari, nsec_rinrin, nsec_chunchun, nsec_whanwhan] = nsecs;
 	if (nsecs.includes(undefined)) {
 		throw Error('NOSTR_PRIVATE_KEY is undefined');
 	}
@@ -38,7 +38,7 @@ const main = async () => {
 	const pubkey_rinrin = getPublicKey(nip19.decode(nsec_rinrin as string).data as Uint8Array);
 	const pubkey_chunchun = getPublicKey(nip19.decode(nsec_chunchun as string).data as Uint8Array);
 	const pubkey_whanwhan = getPublicKey(nip19.decode(nsec_whanwhan as string).data as Uint8Array);
-	const pubkey_unyu = getPublicKey(nip19.decode(nsec_unyu as string).data as Uint8Array);
+//	const pubkey_unyu = getPublicKey(nip19.decode(nsec_unyu as string).data as Uint8Array);
 
 	//リレーに接続
 	const pool = new SimplePool();
@@ -46,16 +46,16 @@ const main = async () => {
 	//イベントの監視
 	const now = Math.floor(Date.now() / 1000);
 	const filters: Filter[] = [
-//		{
-//			kinds: [42],
-//			'#p': Array.from(signermap.keys()),
-//			since: now
-//		},
 		{
-			kinds: [1, 42],
-//			'#p': [pubkey_unyu],
+			kinds: [42],
+			'#p': Array.from(signermap.keys()),
 			since: now
-		}
+		},
+//		{
+//			kinds: [1, 42],
+//			'#p': [pubkey_unyu],
+//			since: now
+//		}
 	];
 	const onevent = async (ev: NostrEvent) => {
 		if (!validateEvent(ev)) {
@@ -65,14 +65,14 @@ const main = async () => {
 		//出力イベントを取得
 		let responseEvents: VerifiedEvent[] = [];
 		const targetPubkeys = new Set(ev.tags.filter(tag => tag.length >= 2 && tag[0] === 'p' && Array.from(signermap.values()).map(signer => signer.getPublicKey()).includes(tag[1])).map(tag => tag[1]));
-		if (/^うにゅう(([くさた]|ちゃ)ん)?、/.test(ev.content)) {
-			targetPubkeys.add(pubkey_unyu);
-		}
+//		if (/^うにゅう(([くさた]|ちゃ)ん)?、/.test(ev.content)) {
+//			targetPubkeys.add(pubkey_unyu);
+//		}
 		for (const pubkey of targetPubkeys) {
 			let rs: VerifiedEvent[] | null;
 			const mode = pubkey === pubkey_jongbari ? Mode.Server
 				: [pubkey_rinrin, pubkey_chunchun, pubkey_whanwhan].includes(pubkey) ? Mode.Client
-				: pubkey === pubkey_unyu ? Mode.Unyu
+//				: pubkey === pubkey_unyu ? Mode.Unyu
 				: Mode.Unyu
 			try {
 				rs = await getResponseEvent(ev, signermap.get(pubkey) as Signer, mode, pool);
