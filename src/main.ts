@@ -65,7 +65,7 @@ const main = async () => {
 		//出力イベントを取得
 		let responseEvents: VerifiedEvent[] = [];
 		const targetPubkeys = new Set(ev.tags.filter(tag => tag.length >= 2 && tag[0] === 'p' && Array.from(signermap.values()).map(signer => signer.getPublicKey()).includes(tag[1])).map(tag => tag[1]));
-		if (/^うにゅう([くさた]ん)?、/.test(ev.content)) {
+		if (/^うにゅう(([くさた]|ちゃ)ん)?、/.test(ev.content)) {
 			targetPubkeys.add(pubkey_unyu);
 		}
 		for (const pubkey of targetPubkeys) {
