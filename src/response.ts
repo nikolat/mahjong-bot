@@ -320,7 +320,7 @@ const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, 
 		case 'tsumo':
 			const tehai14 = tehai[i].concat(tsumo);
 			tehai14.sort(compareFn);
-			const shanten = getShanten(tehai14.join(''));
+			const [shanten, _] = getShanten(tehai14.join(''));
 			if (shanten === -1) {
 				const content = `${tehai[i].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(tsumo)}:\nCongratulations!`;
 				const emoijTags = Array.from(new Set(tehai14)).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
@@ -344,7 +344,7 @@ const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, 
 	for (const index of [0, 1, 2, 3].filter(idx => idx !== i)) {
 		const tehai14 = tehai[index].concat(pai);
 		tehai14.sort(compareFn);
-		const shanten = getShanten(tehai14.join(''));
+		const [shanten, _] = getShanten(tehai14.join(''));
 		if (shanten === -1) {
 			const content = `nostr:${nip19.npubEncode(players[index])}\nGET naku? ron`;
 			const tags = [...getTagsAirrep(event), ['p', players[index], '']];
@@ -406,7 +406,7 @@ const res_c_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, 
 	const tsumo = match[1];
 	const i = players.indexOf(event.tags.filter(tag => tag.length >= 2 && tag[0] === 'p').map(tag => tag[1])[0]);
 	const tehai14 = tehai[i].concat(tsumo);
-	const shanten = getShanten(tehai14.join(''));
+	const [shanten, _] = getShanten(tehai14.join(''));
 	if (shanten === -1) {
 		const content = `nostr:${nip19.npubEncode(event.pubkey)} sutehai? tsumo\n:${convertEmoji(tsumo)}:`;
 		const emoijTags = Array.from(new Set(tehai14)).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
