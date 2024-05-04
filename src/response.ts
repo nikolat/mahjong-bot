@@ -2,6 +2,7 @@ import { type EventTemplate, type VerifiedEvent, type Event as NostrEvent, type 
 import { Mode, Signer } from './utils';
 import { hexToBytes } from '@noble/hashes/utils';
 import { relayUrl } from './config';
+import { getShanten } from './mj_shanten';
 
 export const getResponseEvent = async (requestEvent: NostrEvent, signer: Signer, mode: Mode, pool: SimplePool): Promise<VerifiedEvent[] | null> => {
 	if (requestEvent.pubkey === signer.getPublicKey()) {
@@ -319,7 +320,7 @@ const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, 
 		case 'tsumo':
 			const tehai14 = tehai[i].concat(tsumo);
 			tehai14.sort(compareFn);
-			const shanten = getShanten(tehai14);
+			const shanten = getShanten(tehai14.join(''));
 			if (shanten === -1) {
 				const content = `${tehai[i].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(tsumo)}:\nCongratulations!`;
 				const emoijTags = Array.from(new Set(tehai14)).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
@@ -343,7 +344,7 @@ const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, 
 	for (const index of [0, 1, 2, 3].filter(idx => idx !== i)) {
 		const tehai14 = tehai[index].concat(pai);
 		tehai14.sort(compareFn);
-		const shanten = getShanten(tehai14);
+		const shanten = getShanten(tehai14.join(''));
 		if (shanten === -1) {
 			const content = `nostr:${nip19.npubEncode(players[index])}\nGET naku? ron`;
 			const tags = [...getTagsAirrep(event), ['p', players[index], '']];
@@ -405,7 +406,7 @@ const res_c_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, 
 	const tsumo = match[1];
 	const i = players.indexOf(event.tags.filter(tag => tag.length >= 2 && tag[0] === 'p').map(tag => tag[1])[0]);
 	const tehai14 = tehai[i].concat(tsumo);
-	const shanten = getShanten(tehai14);
+	const shanten = getShanten(tehai14.join(''));
 	if (shanten === -1) {
 		const content = `nostr:${nip19.npubEncode(event.pubkey)} sutehai? tsumo\n:${convertEmoji(tsumo)}:`;
 		const emoijTags = Array.from(new Set(tehai14)).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
@@ -440,13 +441,6 @@ const reset_game = () => {
 	tehai = [];
 	tsumo = '';
 };
-
-const getShanten = (tehai14: string[]) => {
-	const uniqTehai = new Set(tehai14);
-	const nType = uniqTehai.size >= 7 ? 7 : uniqTehai.size;
-	const nToitsu = Array.from(uniqTehai).filter(pai => tehai14.reduce((sum, v) => v === pai ? sum + 1 : sum, 0) >= 2).length;
-	return 6 - nToitsu + (7 - nType);
-}
 
 const paikind = [
 	'1m', '2m', '3m', '4m', '5m', '6m', '7m', '8m', '9m',
