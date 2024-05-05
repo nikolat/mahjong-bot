@@ -312,8 +312,8 @@ const res_s_join = (event: NostrEvent): [string, string[][]][] | null => {
 	return null;
 };
 
-const getScoreView = (i: number, atarihai: string) => {
-	const r = getScore(tehai[i].join(''), atarihai, 'z1', ['z1', 'z2', 'z3', 'z4'][i]);
+const getScoreView = (i: number, atarihai: string, isTsumo: boolean) => {
+	const r = getScore(tehai[i].join(''), atarihai, 'z1', ['z1', 'z2', 'z3', 'z4'][i], '', isTsumo);
 	let content = '';
 	if (r[2].size > 0) {
 		for (const [k, v] of r[2]) {
@@ -347,7 +347,7 @@ const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, 
 			tehai14.sort(compareFn);
 			const [shanten, _] = getShanten(tehai14.join(''));
 			if (shanten === -1) {// 和了
-				const content = getScoreView(i, tsumo) + '\n'
+				const content = getScoreView(i, tsumo, true) + '\n'
 					+ `${tehai[i].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(tsumo)}:`;
 				const emoijTags = Array.from(new Set(tehai14)).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
 				const tags = [...getTagsAirrep(event), ...emoijTags];
@@ -406,7 +406,7 @@ const res_s_naku = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, str
 	const i = players.indexOf(event.pubkey);
 	switch (command) {
 		case 'ron':
-			const content = getScoreView(i, sutehai) + '\n'
+			const content = getScoreView(i, sutehai, false) + '\n'
 				+ `${tehai[i].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(sutehai)}:`;
 			const emoijTags = Array.from(new Set(tehai[i].concat(sutehai))).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
 			const tags = [...getTagsAirrep(event), ...emoijTags];
