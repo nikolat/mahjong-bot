@@ -10,6 +10,7 @@ import {
 
 const SHANTEN_MAX = 99;
 
+//シャンテン数の取得
 export const getShanten = (tehai: string): [number, string[]] => {
 	const r1 = getShantenChitoitsu(tehai);
 	const r2 = getShantenKokushimusou(tehai);
@@ -23,6 +24,32 @@ export const getShanten = (tehai: string): [number, string[]] => {
 	if (r === r2)
 		ret_composition.push('kokushimusou');
 	return [r, ret_composition];
+};
+
+//シャンテン数の取得(役あり)
+export const getShantenYaku = (tehai: string, bafu_hai: string, jifu_hai: string): [number, Map<string, number>] => {
+	const r_chitoitsu = getShantenChitoitsu(tehai);
+	const r_kokushimusou = getShantenKokushimusou(tehai);
+	const r_menzen = getShantenMenzen(tehai);
+	const r_yakuhai = getShantenYakuhai(tehai, bafu_hai, jifu_hai);
+	const r_tanyao = getShantenTanyao(tehai);
+	const r_toitoi = getShantenToitoi(tehai);
+	const r_honitsu = getShantenHonitsu(tehai);
+	const r = Math.min(r_chitoitsu, r_kokushimusou, r_menzen, r_yakuhai, r_tanyao, r_toitoi, r_honitsu);
+	const yaku_info = new Map<string, number>();
+	yaku_info.set('七対子', r_chitoitsu);
+	yaku_info.set('国士無双', r_kokushimusou);
+	yaku_info.set('門前清自摸和', r_menzen);
+	yaku_info.set('役牌', r_yakuhai);
+	yaku_info.set('断ヤオ九', r_tanyao);
+	yaku_info.set('対々和', r_toitoi);
+	yaku_info.set('混一色', r_honitsu);
+	const yaku = new Map<string, number>();
+	for (const [k, v] of yaku_info) {
+		if (v < SHANTEN_MAX)
+			yaku.set(k, v);
+	}
+	return [r, yaku];
 };
 
 //シャンテン数の取得(一般手)
@@ -465,6 +492,28 @@ const getCompositionJihai = (hai: string[]): number[][][] => {
 	return [composition];
 };
 
+const getKotsu = (hai: string[]) => {
+	return getDuplicatedElement(hai, 3);
+};
+
+const getToitsu = (hai: string[]) => {
+	return getDuplicatedElement(hai, 2);
+};
+
+const getDuplicatedElement = (ary: string[], n: number): string[] => {
+	const m = new Map<string, number>();
+	for (const str of ary) {
+		m.set(str, (m.get(str) ?? 0) + 1);
+	}
+	const r: string[] = [];
+	for (const [k, v] of m) {
+		if (v >= n) {
+			r.push(k);
+		}
+	}
+	return r;
+};
+
 //七対子
 export const getShantenChitoitsu = (tehai: string): number => {
 	const [hai_normal, hai_furo, hai_ankan] = stringToArrayWithFuro(tehai);
@@ -503,24 +552,113 @@ export const getShantenKokushimusou = (tehai: string): number => {
 	return 13 - count_type - has_toitsu;
 };
 
-const getKotsu = (hai: string[]) => {
-	return getDuplicatedElement(hai, 3);
+//門前清自摸和
+const getShantenMenzen = (tehai: string): number => {
+	const [hai_normal, hai_furo, hai_ankan] = stringToArrayWithFuro(tehai);
+	if (hai_furo.length > 0)
+		return SHANTEN_MAX;
+	return getShanten(tehai)[0];
 };
 
-const getToitsu = (hai: string[]) => {
-	return getDuplicatedElement(hai, 2);
-};
-
-const getDuplicatedElement = (ary: string[], n: number): string[] => {
-	const m = new Map<string, number>();
-	for (const str of ary) {
-		m.set(str, (m.get(str) ?? 0) + 1);
+//役牌
+const getShantenYakuhai = (tehai: string, bafu_hai: string, jifu_hai: string): number => {
+	const [hai_normal, hai_furo, hai_ankan] = stringToArrayWithFuro(tehai);
+	const kotsu: string[] = getKotsu(hai_normal);
+	const yakuhai = ['5z', '6z', '7z'];
+	if (bafu_hai !== '')
+		yakuhai.push(bafu_hai);
+	if (jifu_hai !== '')
+		yakuhai.push(jifu_hai);
+	let has_yakuhai_kotsu = false;
+	for (const k of kotsu) {
+		if (yakuhai.includes(k))
+			has_yakuhai_kotsu = true;
 	}
-	const r: string[] = [];
-	for (const [k, v] of m) {
-		if (v >= n) {
-			r.push(k);
+	for (const h of hai_furo) {
+		const hai = h.slice(0, 2);
+		if (yakuhai.includes(hai))
+			has_yakuhai_kotsu = true;
+	}
+	for (const h of hai_ankan) {
+		const hai = h.slice(0, 2);
+		if (yakuhai.includes(h))
+			has_yakuhai_kotsu = true;
+	}
+	if (has_yakuhai_kotsu)
+		return getShanten(tehai)[0];
+	const toitsu = getToitsu(hai_normal);
+	let has_yakuhai_toitsu = false;
+	let yakuhai_target = '';
+	for (const t of toitsu) {
+		if (yakuhai.includes(t)) {
+			has_yakuhai_toitsu = true;
+			yakuhai_target = t;
+			break;
 		}
 	}
-	return r;
+	if (!has_yakuhai_toitsu)
+		return SHANTEN_MAX;
+	const tehai_pon = tehai.replace(new RegExp(yakuhai_target), '') + `<${yakuhai_target.repeat(3)}>`;
+	return getShanten(tehai_pon)[0] + 1;
+};
+
+//断么九
+const getShantenTanyao = (tehai: string): number => {
+	const [hai_normal, hai_furo, hai_ankan] = stringToArrayWithFuro(tehai);
+	const yaochu = '1m9m1p9p1s9s1z2z3z4z5z6z7z';
+	for (const h of hai_furo) {
+		const ary = stringToArrayWithFuro(h)[0];
+		for (const a of ary) {
+			if (yaochu.includes(a))
+				return SHANTEN_MAX;
+		}
+	}
+	for (const h of hai_ankan) {
+		if (yaochu.includes(h.slice(0, 2)))
+			return SHANTEN_MAX;
+	}
+	const new_tehai = hai_normal.filter(h => !yaochu.includes(h)).join('')
+		+ (hai_furo.length > 0) ? hai_furo.map(h => `<${h}>`).join('') : ''
+		+ (hai_ankan.length > 0) ? hai_ankan.map(h => `(${h})`).join('') : '';
+	return getShanten(new_tehai)[0];
+};
+
+//対々和
+const getShantenToitoi = (tehai: string): number => {
+	const [hai_normal, hai_furo, hai_ankan] = stringToArrayWithFuro(tehai);
+	for (const h of hai_furo) {
+		const ary = stringToArrayWithFuro(h)[0];
+		if (ary[0] !== ary[1])
+			return SHANTEN_MAX;
+	}
+	const count_kotsu = hai_furo.length + hai_ankan.length + getKotsu(hai_normal).length;
+	let count_toitsu = getToitsu(hai_normal).length - getKotsu(hai_normal).length;
+	if (count_kotsu + count_toitsu > 5)
+		count_toitsu = 5 - count_kotsu;
+	return 8 - (2 * count_kotsu) - count_toitsu;
+};
+
+//混一色
+const getShantenHonitsu = (tehai: string): number => {
+	const m = getShantenHonitsuByColor(tehai, 'm');
+	const p = getShantenHonitsuByColor(tehai, 'p');
+	const s = getShantenHonitsuByColor(tehai, 's');
+	return Math.min(m, p, s);
+};
+
+//混一色(色指定)
+const getShantenHonitsuByColor = (tehai: string, color: string): number => {
+	const [hai_normal, hai_furo, hai_ankan] = stringToArrayWithFuro(tehai);
+	for (const h of hai_furo) {
+		if (h.slice(1, 2) !== color)
+			return SHANTEN_MAX;
+	}
+	for (const h of hai_ankan) {
+		if (h.slice(1, 2) !== color)
+			return SHANTEN_MAX;
+	}
+	const new_tehai = hai_normal.filter(h => [color, 'z'].includes(h.slice(1, 2))).join('')
+		+ (hai_furo.length > 0) ? hai_furo.map(h => `<${h}>`).join('') : ''
+		+ (hai_ankan.length > 0) ? hai_ankan.map(h => `(${h})`).join('') : '';
+	return getShanten(new_tehai)[0];
 };

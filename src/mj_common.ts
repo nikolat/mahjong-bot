@@ -78,7 +78,7 @@ export const removeElementByName = (ary: string[], name: string, count: number) 
 		}
 	}
 	return ret;
-}
+};
 
 //重複した要素を削除
 export const uniq = (ary: string[][]) => {

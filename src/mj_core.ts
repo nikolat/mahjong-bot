@@ -1,6 +1,7 @@
-import { compareFn, stringToArrayWithFuro } from "./mj_common";
+import { compareFn, getDoraFromDorahyouji, stringToArrayWithFuro } from "./mj_common";
 import { getMachi } from "./mj_machi";
-import { getShanten, removeKoritsuHai } from "./mj_shanten";
+import { getScore } from "./mj_score";
+import { getShanten, getShantenYaku, removeKoritsuHai } from "./mj_shanten";
 
 export const naniwokiru = (
 	strTehai13: string,
@@ -19,20 +20,31 @@ export const naniwokiru = (
 	const strTehai14Normal = arTehai14Normal.join('') + hai_furo.map(h => `<${h}>`).join('') + hai_ankan.map(h => `(${h})`).join('');
 	const [_, arKoritsuhai] = removeKoritsuHai(arTehai14Normal);
 	const arSutehaiKouho = new Set(arTehai14Normal)
+	//ドラ
+	const arDorahyouji = stringToArrayWithFuro(strDorahyouji ?? '')[0];
+	const arDora: string[] = arDorahyouji.map(d => getDoraFromDorahyouji(d));
 	let arDahai: string[] = [];
 	let point = -1;
 	for (const sutehai of arSutehaiKouho) {
 		const strTehaiRemoved = strTehai14Normal.replace(new RegExp(sutehai), '');
-		const [shanten, arMentsuPattern] = getShanten(strTehaiRemoved);
-		const shantenPoint = 1000 * (10 - shanten);
+		const [shanten, _] = getShantenYaku(strTehaiRemoved, strBafuhai ?? '', strJifuhai ?? '');
+		let shantenPoint = 1000 * (10 - shanten);
 		let machiPoint = 0;
 		let elementMaxPoint = 0;
-		//テンパイ時は待ちの広さを考慮
+		//テンパイ時は待ちの広さ・和了点の高さを考慮
 		if (shanten === 0) {
-			const [arMachi, _1, _2] = stringToArrayWithFuro(getMachi(strTehaiRemoved));
-			machiPoint = arMachi.length * 100;
+			const arMachi = stringToArrayWithFuro(getMachi(strTehaiRemoved))[0];
+			for (const machi of arMachi) {
+				const isTsumo = true;//ツモった場合を想定
+				const score = getScore(strTehaiRemoved, machi, strBafuhai ?? '', strJifuhai ?? '', arDora.join(''), isTsumo)[0];
+				if (score > 0) {
+					machiPoint += score;
+				}
+			}
+			shantenPoint += 10000;//テンパイを崩してまでオリないこととする
 		}
 		else {
+			const [_, arMentsuPattern] = getShanten(strTehaiRemoved);
 			for (const strMentsu of arMentsuPattern) {
 				let elementPoint = 0;
 				if (strMentsu === 'chitoitsu' || strMentsu === 'kokushimusou') {
@@ -81,7 +93,12 @@ export const naniwokiru = (
 		if (arKoritsuhai.includes(sutehai)) {
 			koritsuPoint = 500;
 		}
-		const dahaiPoint = shantenPoint + machiPoint + elementMaxPoint + koritsuPoint;
+		//ドラは残しておきたい
+		let doraPoint = 0
+		if (arDora.includes(sutehai)) {
+			doraPoint = -50
+		}
+		const dahaiPoint = shantenPoint + machiPoint + elementMaxPoint + koritsuPoint + doraPoint;
 		if (point < dahaiPoint) {
 			point = dahaiPoint;
 			arDahai = [sutehai];

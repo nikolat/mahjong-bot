@@ -5,7 +5,8 @@ import { relayUrl } from './config';
 import { getShanten } from './mj_shanten';
 import { naniwokiru } from './mj_core';
 import { getScore } from './mj_score';
-import { compareFn, getDoraFromDorahyouji, paikind } from './mj_common';
+import { compareFn, getDoraFromDorahyouji, paikind, stringToArrayWithFuro } from './mj_common';
+import { getMachi } from './mj_machi';
 
 export const getResponseEvent = async (requestEvent: NostrEvent, signer: Signer, mode: Mode, pool: SimplePool): Promise<VerifiedEvent[] | null> => {
 	if (requestEvent.pubkey === signer.getPublicKey()) {
@@ -335,6 +336,7 @@ let nYamaIndex = 0;
 let tehai: string[][] = [];
 let tsumo: string;
 let sutehai: string;
+let currentPlayer: number;
 let reservedNaku: Map<string, string>;
 let reservedTenpai: Map<string, string>;
 let dResponseNeed: Map<string, string>;
@@ -365,6 +367,7 @@ const startKyoku = (event: NostrEvent): [string, string[][]][] => {
 	reservedTenpai = new Map<string, string>();
 	dResponseNeed = new Map<string, string>();
 	tsumo = arYama[nYamaIndex++];
+	currentPlayer = oyaIndex;
 	let s: string = '';
 	//kyokustart通知
 	const content = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY kyokustart ${arBafu[bafu]} nostr:${nip19.npubEncode(players[oyaIndex])} ${tsumibou} ${kyotaku}`;
@@ -429,7 +432,7 @@ const getJifuHai = (nPlayer: number): string => {
 	return dSeki.get(players[nPlayer]) ?? '';
 };
 
-const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, string[][]][] | null => {
+const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, string[][]][] => {
 	const match = event.content.match(regstr);
 	if (match === null) {
 		throw new Error();
@@ -437,21 +440,19 @@ const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, 
 	const command = match[1] ?? 'sutehai';
 	const pai = match[2];
 	const i = players.indexOf(event.pubkey);
+	currentPlayer = i;
 	switch (command) {
 		case 'tsumo':
-			const tehai14 = tehai[i].concat(tsumo);
-			tehai14.sort(compareFn);
-			const [shanten, _] = getShanten(tehai14.join(''));
-			if (shanten === -1) {// 和了
+			if (canTsumo(i, tsumo)) {// 和了
 				const content = getScoreView(i, tsumo, true) + '\n'
 					+ `${tehai[i].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(tsumo)}:`;
-				const emoijTags = Array.from(new Set(tehai14)).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
+				const emoijTags = Array.from(new Set(tehai[i].concat(tsumo))).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
 				const tags = [...getTagsAirrep(event), ...emoijTags];
 				reset_game();
 				return [[content, tags]];
 			}
 			else {
-				const content = `shanten is ${shanten}.`;
+				const content = 'You cannot tsumo.';
 				const tags = getTagsReply(event);
 				return [[content, tags]];
 			}
@@ -466,10 +467,7 @@ const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, 
 	}
 	const naku: [string, string[][]][] = [];
 	for (const index of [0, 1, 2, 3].filter(idx => idx !== i)) {
-		const tehai14 = tehai[index].concat(pai);
-		tehai14.sort(compareFn);
-		const [shanten, _] = getShanten(tehai14.join(''));
-		if (shanten === -1) {
+		if (canRon(index, pai)) {
 			const content = `nostr:${nip19.npubEncode(players[index])}\nGET naku? ron`;
 			const tags = [...getTagsAirrep(event), ['p', players[index], '']];
 			naku.push([content, tags]);
@@ -478,6 +476,10 @@ const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, 
 	if (naku.length > 0) {
 		return naku;
 	}
+	return sendNextTurn(event);
+};
+
+const sendNextTurn = (event: NostrEvent): [string, string[][]][] => {
 	if (arYama[nYamaIndex] === undefined) {
 		const content = `ryukyoku`;
 		const tags = getTagsAirrep(event);
@@ -485,11 +487,27 @@ const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, 
 	}
 	tsumo = arYama[nYamaIndex];
 	nYamaIndex++
-	const i2 = (i + 1) % 4;
+	const i2 = (currentPlayer + 1) % 4;
 	const content = `NOTIFY tsumo nostr:${nip19.npubEncode(players[i2])} ${arYama.length - nYamaIndex} ${tsumo}\n${tehai[i2].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(tsumo)}:\nGET sutehai?`;
 	const emoijTags = Array.from(new Set(tehai[i2].concat(tsumo))).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
 	const tags = [...getTagsAirrep(event), ['p', players[i2], ''], ...emoijTags];
 	return [[content, tags]];
+};
+
+const canTsumo = (nPlayer: number, atariHai: string): boolean => {
+	if (atariHai === '')
+		return false;
+	//和了かどうか(シャンテン数が-1かどうか)検証する
+	const tehai14 = tehai[nPlayer].concat(atariHai);//fix me
+	tehai14.sort(compareFn);
+	const shanten = getShanten(tehai14.join(''))[0];
+	if (shanten !== -1)
+		return false;
+	//役があるかどうか検証する
+	const score = getScore(tehai[nPlayer].join(''), atariHai, ['1z', '2z'][bafu], getJifuHai(nPlayer), getDoraFromDorahyouji(dorahyouji), true)[0];//fix me
+	if (score <= 0)
+		return false;
+	return true;
 };
 
 const res_s_naku = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, string[][]][] | null => {
@@ -502,16 +520,55 @@ const res_s_naku = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, str
 	const i = players.indexOf(event.pubkey);
 	switch (command) {
 		case 'ron':
-			const content = getScoreView(i, sutehai, false) + '\n'
+			if (canRon(i, sutehai)) {
+				const content = getScoreView(i, sutehai, false) + '\n'
 				+ `${tehai[i].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(sutehai)}:`;
-			const emoijTags = Array.from(new Set(tehai[i].concat(sutehai))).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
-			const tags = [...getTagsAirrep(event), ...emoijTags];
-			reset_game();
-			return [[content, tags]];
+				const emoijTags = Array.from(new Set(tehai[i].concat(sutehai))).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
+				const tags = [...getTagsAirrep(event), ...emoijTags];
+				reset_game();
+				return [[content, tags]];
+			}
+			else {
+				const content = 'You cannot ron.';
+				const tags = getTagsReply(event);
+				return [[content, tags]];
+			}
 		case 'no':
+			return sendNextTurn(event);
 		default:
 			throw new TypeError(`command ${command} is not supported`);
 	}
+};
+
+const canRon = (nPlayer: number, atariHai: string): boolean => {
+	//和了かどうか(シャンテン数が-1かどうか)検証する
+	const tehai14 = tehai[nPlayer].concat(atariHai);//fix me
+	tehai14.sort(compareFn);
+	const shanten = getShanten(tehai14.join(''))[0];
+	if (shanten !== -1)
+		return false;
+	//フリテンかどうか検証する
+	const arMachi: string[] = stringToArrayWithFuro(getMachi(tehai[nPlayer].join('')))[0];
+	const isRichi = arRichiJunme[nPlayer] >= 0;
+	for (const machi of arMachi) {
+		if (arKawa[nPlayer].includes(machi))
+			return false;
+		if (isRichi) {
+			const index = arFuritenCheckRichi[nPlayer].indexOf(machi);
+			if (index >= 0 && index !== arFuritenCheckRichi[nPlayer].length - 1)
+				return false;
+		}
+		if (arFuritenCheckTurn[nPlayer].includes(machi)) {
+			const index = arFuritenCheckTurn[nPlayer].indexOf(machi);
+			if (index >= 0 && index !== arFuritenCheckTurn[nPlayer].length - 1)
+				return false;
+		}
+	}
+	//役があるかどうか検証する
+	const score = getScore(tehai[nPlayer].join(''), atariHai, ['1z', '2z'][bafu], getJifuHai(nPlayer), getDoraFromDorahyouji(dorahyouji), false)[0];//fix me
+	if (score <= 0)
+		return false;
+	return true;
 };
 
 const res_s_reset = (event: NostrEvent): [string, string[][]][] | null => {
@@ -539,7 +596,7 @@ const res_c_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, 
 		const tags = [...getTagsReply(event), ...emoijTags];
 		return [[content, tags]];
 	}
-	const sutehai = naniwokiru(tehai[i].join(''), tsumo);
+	const sutehai = naniwokiru(tehai[i].join(''), tsumo, undefined, ['1z', '2z'][bafu], getJifuHai(i), dorahyouji);
 	const content = `nostr:${nip19.npubEncode(event.pubkey)} sutehai? sutehai ${sutehai}\n:${convertEmoji(sutehai)}:`;
 	const tags = [...getTagsReply(event), ['emoji', convertEmoji(sutehai), getEmojiUrl(sutehai)]];
 	return [[content, tags]];

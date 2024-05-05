@@ -28,10 +28,7 @@ export const getScore = (
 	is_1st_round: boolean = false,
 ): [number, number, Map<string, number>, Map<string, number>] => {
 	const is_oya: boolean = (jifu_hai === '1z');
-	const hai_split: string[][] = stringToArrayWithFuro(tehai);
-	const hai_normal: string[] = hai_split[0];
-	const hai_furo: string[] = hai_split[1];
-	const hai_ankan: string[] = hai_split[2];
+	const [hai_normal, hai_furo, hai_ankan] = stringToArrayWithFuro(tehai);
 	const is_menzen: boolean = (hai_furo.length === 0);
 	const hai_normal_all: string[] = structuredClone(hai_normal);
 	hai_normal_all.push(agari_hai);
