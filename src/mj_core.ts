@@ -1,6 +1,6 @@
-import { stringToArrayWithFuro } from "./mj_common";
+import { compareFn, stringToArrayWithFuro } from "./mj_common";
 import { getMachi } from "./mj_machi";
-import { compareFn, getShanten, removeKoritsuHai } from "./mj_shanten";
+import { getShanten, removeKoritsuHai } from "./mj_shanten";
 
 export const naniwokiru = (
 	strTehai13: string,

@@ -4,6 +4,8 @@ import { hexToBytes } from '@noble/hashes/utils';
 import { relayUrl } from './config';
 import { getShanten } from './mj_shanten';
 import { naniwokiru } from './mj_core';
+import { getScore } from './mj_score';
+import { compareFn } from './mj_common';
 
 export const getResponseEvent = async (requestEvent: NostrEvent, signer: Signer, mode: Mode, pool: SimplePool): Promise<VerifiedEvent[] | null> => {
 	if (requestEvent.pubkey === signer.getPublicKey()) {
@@ -310,6 +312,27 @@ const res_s_join = (event: NostrEvent): [string, string[][]][] | null => {
 	return null;
 };
 
+const getScoreView = (i: number) => {
+	const r = getScore(tehai[i].join(''), tsumo, 'z1', ['z1', 'z2', 'z3', 'z4'][i]);
+	let content = '';
+	if (r[2].size > 0) {
+		for (const [k, v] of r[2]) {
+			content += `${k} ${v >= 2 ? `${v}倍` : ''}役満\n`;
+		}
+	}
+	else {
+		let han = 0;
+		for (const [k, v] of r[3]) {
+			han += v;
+			content += `${k} ${v}翻\n`;
+		}
+		content	+= `${r[1]}符${han}翻\n`;
+	}
+	content	+= `${r[0]}点\n `
+		+ `nostr:${nip19.npubEncode(players[i])} +${r[0]}`;
+	return content;
+};
+
 const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, string[][]][] | null => {
 	const match = event.content.match(regstr);
 	if (match === null) {
@@ -323,8 +346,9 @@ const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, 
 			const tehai14 = tehai[i].concat(tsumo);
 			tehai14.sort(compareFn);
 			const [shanten, _] = getShanten(tehai14.join(''));
-			if (shanten === -1) {
-				const content = `${tehai[i].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(tsumo)}:\nCongratulations!`;
+			if (shanten === -1) {// 和了
+				const content = getScoreView(i) + '\n'
+					+ `${tehai[i].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(tsumo)}:`;
 				const emoijTags = Array.from(new Set(tehai14)).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
 				const tags = [...getTagsAirrep(event), ...emoijTags];
 				reset_game();
@@ -382,7 +406,8 @@ const res_s_naku = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, str
 	const i = players.indexOf(event.pubkey);
 	switch (command) {
 		case 'ron':
-			const content = `${tehai[i].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(sutehai)}:\nCongratulations!`;
+			const content = getScoreView(i) + '\n'
+				+ `${tehai[i].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(sutehai)}:`;
 			const emoijTags = Array.from(new Set(tehai[i].concat(sutehai))).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
 			const tags = [...getTagsAirrep(event), ...emoijTags];
 			reset_game();
@@ -453,16 +478,6 @@ const shuffle = (array: string[]) => {
 	} 
 	return array; 
 }; 
-
-const compareFn = (a: string, b: string) => {
-	if (paikind.indexOf(a) < paikind.indexOf(b)) {
-		return -1;
-	}
-	else if (paikind.indexOf(a) > paikind.indexOf(b)) {
-		return 1;
-	}
-	return 0;
-};
 
 const any = (array: string[]): string => {
 	return array[Math.floor(Math.random() * array.length)];

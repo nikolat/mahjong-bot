@@ -28,9 +28,15 @@ export const countArrayToNumArray = (haiArray: number[]) => {
 	return a;
 }
 
+//配列に変換
+export const stringToArray = (tehai: string): string[] => {
+	const [hai_normal, hai_furo, hai_ankan] = stringToArrayWithFuro(tehai);
+	return [...hai_normal, ...hai_furo, ...hai_ankan];
+};
+
 //配列に変換(副露を分離)
 export const stringToArrayWithFuro = (tehai: string): [string[], string[], string[]] => {
-	const m = tehai.match(/^(([1-9][mspz])+)(<([1-9][mspz]){3,4}>|\(([1-9][mspz]){4}\))*$/);
+	const m = tehai.match(/^(([1-9][mspz])*)(<([1-9][mspz]){3,4}>|\(([1-9][mspz]){4}\))*$/);
 	if (m === null) {
 		throw new TypeError(`${tehai} is invalid`);
 	}
@@ -51,6 +57,12 @@ export const stringToArrayWithFuro = (tehai: string): [string[], string[], strin
 		r.push(m[0]);
 	}
 	return [r, furo, ankan];
+};
+
+//配列に変換(副露を区別しない)
+export const stringToArrayPlain = (tehai: string): string[] => {
+	const [hai_normal, hai_furo, hai_ankan] = stringToArrayWithFuro(tehai);
+	return hai_normal.concat(stringToArrayWithFuro(hai_furo.join('') + hai_ankan.join(''))[0]);
 };
 
 //指定した要素を削除
@@ -81,4 +93,21 @@ export const uniq = (ary: string[][]) => {
 		}
 	}
 	return ret;
+};
+
+const paikind = [
+	'1m', '2m', '3m', '4m', '5m', '6m', '7m', '8m', '9m',
+	'1p', '2p', '3p', '4p', '5p', '6p', '7p', '8p', '9p',
+	'1s', '2s', '3s', '4s', '5s', '6s', '7s', '8s', '9s',
+	'1z', '2z', '3z', '4z', '5z', '6z', '7z',
+];
+
+export const compareFn = (a: string, b: string) => {
+	if (paikind.indexOf(a) < paikind.indexOf(b)) {
+		return -1;
+	}
+	else if (paikind.indexOf(a) > paikind.indexOf(b)) {
+		return 1;
+	}
+	return 0;
 };

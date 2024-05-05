@@ -1,4 +1,5 @@
 import {
+	compareFn,
 	countArrayToNumArray,
 	numArrayToCountArray,
 	removeElementByName,
@@ -25,7 +26,7 @@ export const getShanten = (tehai: string): [number, string[]] => {
 };
 
 //シャンテン数の取得(一般手)
-const getShantenNormal = (tehai: string): [number, string[]] => {
+export const getShantenNormal = (tehai: string): [number, string[]] => {
 	const [hai_normal, hai_furo, hai_ankan] = stringToArrayWithFuro(tehai);
 	hai_normal.sort(compareFn);
 	//孤立牌の除去
@@ -464,25 +465,8 @@ const getCompositionJihai = (hai: string[]): number[][][] => {
 	return [composition];
 };
 
-const paikind = [
-	'1m', '2m', '3m', '4m', '5m', '6m', '7m', '8m', '9m',
-	'1p', '2p', '3p', '4p', '5p', '6p', '7p', '8p', '9p',
-	'1s', '2s', '3s', '4s', '5s', '6s', '7s', '8s', '9s',
-	'1z', '2z', '3z', '4z', '5z', '6z', '7z',
-];
-
-export const compareFn = (a: string, b: string) => {
-	if (paikind.indexOf(a) < paikind.indexOf(b)) {
-		return -1;
-	}
-	else if (paikind.indexOf(a) > paikind.indexOf(b)) {
-		return 1;
-	}
-	return 0;
-};
-
 //七対子
-const getShantenChitoitsu = (tehai: string): number => {
+export const getShantenChitoitsu = (tehai: string): number => {
 	const [hai_normal, hai_furo, hai_ankan] = stringToArrayWithFuro(tehai);
 	if (hai_furo.length > 0 || hai_ankan.length > 0) {
 		return SHANTEN_MAX;
@@ -497,7 +481,7 @@ const getShantenChitoitsu = (tehai: string): number => {
 };
 
 //国士無双
-const getShantenKokushimusou = (tehai: string): number => {
+export const getShantenKokushimusou = (tehai: string): number => {
 	const [hai_normal, hai_furo, hai_ankan] = stringToArrayWithFuro(tehai);
 	if (hai_furo.length > 0 || hai_ankan.length > 0) {
 		return SHANTEN_MAX;
