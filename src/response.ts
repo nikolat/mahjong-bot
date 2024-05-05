@@ -313,7 +313,7 @@ const res_s_join = (event: NostrEvent): [string, string[][]][] | null => {
 };
 
 const getScoreView = (i: number, atarihai: string, isTsumo: boolean) => {
-	const r = getScore(tehai[i].join(''), atarihai, 'z1', ['z1', 'z2', 'z3', 'z4'][i], '', isTsumo);
+	const r = getScore(tehai[i].join(''), atarihai, '1z', ['1z', '2z', '3z', '4z'][i], '', isTsumo);
 	let content = '';
 	if (r[2].size > 0) {
 		for (const [k, v] of r[2]) {
