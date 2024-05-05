@@ -367,12 +367,12 @@ const startKyoku = (event: NostrEvent): [string, string[][]][] => {
 	tsumo = arYama[nYamaIndex++];
 	let s: string = '';
 	//kyokustart通知
-	const content = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY kyokustart ${arBafu[bafu]} nostr:${players[oyaIndex]} ${tsumibou} ${kyotaku}`;
+	const content = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY kyokustart ${arBafu[bafu]} nostr:${nip19.npubEncode(players[oyaIndex])} ${tsumibou} ${kyotaku}`;
 	const tags = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
 	res.push([content, tags]);
 	//point通知
 	for (let i = 0; i < players.length; i++) {
-		const content = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY point nostr:${players[i]} = ${arScore[i]}`;
+		const content = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY point nostr:${nip19.npubEncode(players[i])} = ${arScore[i]}`;
 		const tags = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
 		res.push([content, tags]);
 	}
