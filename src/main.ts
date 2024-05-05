@@ -10,6 +10,7 @@ import {
 	useWebSocketImplementation,
 } from 'nostr-tools';
 useWebSocketImplementation(require('ws'));
+import { setTimeout as sleep } from 'node:timers/promises';
 import { Mode, Signer } from './utils';
 import { relayUrl, getNsecs, isDebug } from './config';
 import { getResponseEvent } from './response';
@@ -98,6 +99,7 @@ const main = async () => {
 				for (const post of posts) {
 					const results = await post;
 					console.log(results);
+					await sleep(100);
 				}
 			} catch (error) {
 				console.error(error);
