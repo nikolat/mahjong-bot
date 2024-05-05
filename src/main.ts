@@ -95,8 +95,10 @@ const main = async () => {
 				console.info(`RES from ${nip19.npubEncode(responseEvent.pubkey)}\n${responseEvent.content}`);
 			}
 			try {
-				const results = await Promise.any(posts);
-				console.log(results);
+				for (const post of posts) {
+					const results = await post;
+					console.log(results);
+				}
 			} catch (error) {
 				console.error(error);
 			}
