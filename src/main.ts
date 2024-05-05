@@ -90,15 +90,15 @@ const main = async () => {
 		console.info((new Date()).toISOString());
 		console.info(`REQ from ${nip19.npubEncode(ev.pubkey)}\n${ev.content}`);
 		if (responseEvents.length > 0) {
-			try {
-				for (const responseEvent of responseEvents) {
+			for (const responseEvent of responseEvents) {
+				try {
 					const results = await Promise.allSettled(pool.publish(relayUrl, responseEvent));
 					console.info(`RES from ${nip19.npubEncode(responseEvent.pubkey)}\n${responseEvent.content}`);
 					console.log(results);
-					await sleep(100);
+				} catch (error) {
+					console.log(error);
 				}
-			} catch (error) {
-				console.error(error);
+				await sleep(100);
 			}
 		}
 	};
