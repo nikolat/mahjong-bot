@@ -77,14 +77,8 @@ const main = async () => {
 			try {
 				rs = await getResponseEvent(ev, signermap.get(pubkey) as Signer, mode, pool);
 			} catch (error) {
-				if (error instanceof Error) {
-					console.error(error.message);
-					return;
-				}
-				else {
-					console.error(error);
-					return;
-				}
+				console.error(error);
+				return;
 			}
 			if (rs !== null) {
 				responseEvents = responseEvents.concat(rs);
@@ -100,8 +94,12 @@ const main = async () => {
 				posts.concat(pool.publish(relayUrl, responseEvent));
 				console.info(`RES from ${nip19.npubEncode(responseEvent.pubkey)}\n${responseEvent.content}`);
 			}
-			const results = await Promise.allSettled(posts);
-			console.log(results);
+			try {
+				const results = await Promise.any(posts);
+				console.log(results);
+			} catch (error) {
+				console.error(error);
+			}
 		}
 	};
 	const oneose = async () => {
