@@ -121,7 +121,7 @@ const getShantenNormal = (tehai: string): [number, string[]] => {
 };
 
 //孤立牌の除去
-const removeKoritsuHai = (haiArray: string[]): [string[], string[]] => {
+export const removeKoritsuHai = (haiArray: string[]): [string[], string[]] => {
 	const ret_removed_hai: string[] = [];
 	const ret_koritsu_hai: string[] = [];
 	for (const hai of haiArray) {
@@ -250,7 +250,7 @@ const getCompositionRecursion = (hai: number[], n: number, composition_a: number
 	//面子の抜き取りが終わったら搭子/対子の数を数える
 	if (n > 9) {
 		const start = 1;
-		const [count_tatsu, ret_tatsu_and_koritsu] = getTatsuAndKoritsu(hai, start, [[]]);
+		const [count_tatsu, ret_tatsu_and_koritsu] = getTatsuAndKoritsu(structuredClone(hai), start, [[]]);
 		ret_a = [];
 		ret_b = [];
 		for (const tkelm of ret_tatsu_and_koritsu) {
@@ -272,12 +272,12 @@ const getCompositionRecursion = (hai: number[], n: number, composition_a: number
 	}
 
 	//まずは面子を抜かず位置を1つ進め試行
-	[max, ret_a, ret_b] = getCompositionRecursion(hai, n + 1, structuredClone(composition_a), structuredClone(composition_b));//仮の最適値とする
+	[max, ret_a, ret_b] = getCompositionRecursion(structuredClone(hai), n + 1, structuredClone(composition_a), structuredClone(composition_b));//仮の最適値とする
 
 	//順子抜き取り
 	if (n <= 7 && hai[n] > 0 && hai[n + 1] > 0 && hai[n + 2] > 0) {
-		let ret_a_shuntsu: number[][][] = composition_a;
-		let ret_b_shuntsu: number[][][] = composition_b;
+		let ret_a_shuntsu: number[][][] = structuredClone(composition_a);
+		let ret_b_shuntsu: number[][][] = structuredClone(composition_b);
 		hai[n]--; hai[n + 1]--; hai[n + 2]--;
 		for (let i = 0; i < ret_a_shuntsu.length; i++) {
 			ret_a_shuntsu[i].push([ n, n + 1, n + 2 ]);
@@ -286,7 +286,7 @@ const getCompositionRecursion = (hai: number[], n: number, composition_a: number
 			ret_b_shuntsu[i].push([ n, n + 1, n + 2 ]);
 		}
 		let r;
-		[r, ret_a_shuntsu, ret_b_shuntsu] = getCompositionRecursion(hai, n, ret_a_shuntsu, ret_b_shuntsu);//抜き取ったら同じ位置でもう一度試行
+		[r, ret_a_shuntsu, ret_b_shuntsu] = getCompositionRecursion(structuredClone(hai), n, structuredClone(ret_a_shuntsu), structuredClone(ret_b_shuntsu));//抜き取ったら同じ位置でもう一度試行
 		hai[n]++; hai[n + 1]++; hai[n + 2]++;
 		r[0][0]++; r[1][0]++;//各パターンの面子の数を1増やす
 		//必要であれば最適値の入替えをする
@@ -312,8 +312,8 @@ const getCompositionRecursion = (hai: number[], n: number, composition_a: number
 
 	//刻子抜き取り
 	if (hai[n] >= 3) {
-		let ret_a_kotsu: number[][][] = composition_a;
-		let ret_b_kotsu: number[][][] = composition_b;
+		let ret_a_kotsu: number[][][] = structuredClone(composition_a);
+		let ret_b_kotsu: number[][][] = structuredClone(composition_b);
 		hai[n] -= 3;
 		for (let i = 0; i < ret_a_kotsu.length; i++) {
 			ret_a_kotsu[i].push([ n, n, n ]);
@@ -322,7 +322,7 @@ const getCompositionRecursion = (hai: number[], n: number, composition_a: number
 			ret_b_kotsu[i].push([ n, n, n ]);
 		}
 		let r;
-		[r, ret_a_kotsu, ret_b_kotsu] = getCompositionRecursion(hai, n, ret_a_kotsu, ret_b_kotsu);//抜き取ったら同じ位置でもう一度試行
+		[r, ret_a_kotsu, ret_b_kotsu] = getCompositionRecursion(structuredClone(hai), n, structuredClone(ret_a_kotsu), structuredClone(ret_b_kotsu));//抜き取ったら同じ位置でもう一度試行
 		hai[n] += 3;
 		r[0][0]++; r[1][0]++;//各パターンの面子の数を1増やす
 		//必要であれば最適値の入替えをする
@@ -372,17 +372,17 @@ const getTatsuAndKoritsu = (hai: number[], n: number, ret_tatsu_and_koritsu: num
 	}
 
 	//まずは塔子/対子を抜かず位置を1つ進め試行
-	[max, ret] = getTatsuAndKoritsu(hai, n + 1, structuredClone(ret_tatsu_and_koritsu));//仮の最適値とする
+	[max, ret] = getTatsuAndKoritsu(structuredClone(hai), n + 1, structuredClone(ret_tatsu_and_koritsu));//仮の最適値とする
 
 	//嵌張抜き取り
 	if (n <= 7 && hai[n] > 0 && hai[n + 2] > 0) {
-		let ret1: number[][][] = ret_tatsu_and_koritsu;
+		let ret1: number[][][] = structuredClone(ret_tatsu_and_koritsu);
 		hai[n]--; hai[n + 2]--;
 		for (let i = 0; i < ret1.length; i++) {
 			ret1[i].push([ n, n + 2 ]);
 		}
 		let r: number;
-		[r, ret1] = getTatsuAndKoritsu(hai, n, ret1);//抜き取ったら同じ位置でもう一度試行
+		[r, ret1] = getTatsuAndKoritsu(structuredClone(hai), n, structuredClone(ret1));//抜き取ったら同じ位置でもう一度試行
 		hai[n]++; hai[n + 2]++;
 		r++;//塔子の数を1増やす
 		//必要であれば最適値の入替えをする
@@ -399,13 +399,13 @@ const getTatsuAndKoritsu = (hai: number[], n: number, ret_tatsu_and_koritsu: num
 
 	//両面、辺張抜き取り
 	if (n <= 8 && hai[n] > 0 && hai[n + 1] > 0) {
-		let ret2: number[][][] = ret_tatsu_and_koritsu;
+		let ret2: number[][][] = structuredClone(ret_tatsu_and_koritsu);
 		hai[n]--; hai[n + 1]--;
 		for (let i = 0; i < ret2.length; i++) {
 			ret2[i].push([ n, n + 1 ]);
 		}
 		let r: number;
-		[r, ret2] = getTatsuAndKoritsu(hai, n, ret2);//抜き取ったら同じ位置でもう一度試行
+		[r, ret2] = getTatsuAndKoritsu(structuredClone(hai), n, structuredClone(ret2));//抜き取ったら同じ位置でもう一度試行
 		hai[n]++; hai[n + 1]++;
 		r++;//塔子の数を1増やす
 		//必要であれば最適値の入替えをする
@@ -422,13 +422,13 @@ const getTatsuAndKoritsu = (hai: number[], n: number, ret_tatsu_and_koritsu: num
 
 	//対子抜き取り
 	if (hai[n] >= 2) {
-		let ret3 = ret_tatsu_and_koritsu;
+		let ret3: number[][][] = structuredClone(ret_tatsu_and_koritsu);
 		hai[n] -= 2;
 		for (let i = 0; i < ret3.length; i++) {
 			ret3[i].push([ n, n ]);
 		}
 		let r;
-		[r, ret3] = getTatsuAndKoritsu(hai, n, ret3);//抜き取ったら同じ位置でもう一度試行
+		[r, ret3] = getTatsuAndKoritsu(structuredClone(hai), n, structuredClone(ret3));//抜き取ったら同じ位置でもう一度試行
 		hai[n] += 2;
 		r++;//塔子の数を1増やす
 		//必要であれば最適値の入替えをする
@@ -471,7 +471,7 @@ const paikind = [
 	'1z', '2z', '3z', '4z', '5z', '6z', '7z',
 ];
 
-const compareFn = (a: string, b: string) => {
+export const compareFn = (a: string, b: string) => {
 	if (paikind.indexOf(a) < paikind.indexOf(b)) {
 		return -1;
 	}

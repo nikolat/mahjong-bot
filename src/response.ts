@@ -3,6 +3,7 @@ import { Mode, Signer } from './utils';
 import { hexToBytes } from '@noble/hashes/utils';
 import { relayUrl } from './config';
 import { getShanten } from './mj_shanten';
+import { naniwokiru } from './mj_core';
 
 export const getResponseEvent = async (requestEvent: NostrEvent, signer: Signer, mode: Mode, pool: SimplePool): Promise<VerifiedEvent[] | null> => {
 	if (requestEvent.pubkey === signer.getPublicKey()) {
@@ -267,6 +268,7 @@ let yama: string[] = [];
 let nYamaIndex = 0;
 let tehai: string[][] = [];
 let tsumo: string;
+let sutehai: string;
 
 const res_s_gamestart = (event: NostrEvent): [string, string[][]][] | null => {
 	reset_game();
@@ -325,6 +327,7 @@ const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, 
 				const content = `${tehai[i].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(tsumo)}:\nCongratulations!`;
 				const emoijTags = Array.from(new Set(tehai14)).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
 				const tags = [...getTagsAirrep(event), ...emoijTags];
+				reset_game();
 				return [[content, tags]];
 			}
 			else {
@@ -336,6 +339,7 @@ const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, 
 			tehai[i].push(tsumo);
 			tehai[i].splice(tehai[i].indexOf(pai), 1);
 			tehai[i].sort(compareFn);
+			sutehai = pai;
 			break;
 		default:
 			throw new TypeError(`command ${command} is not supported`);
@@ -378,9 +382,10 @@ const res_s_naku = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, str
 	const i = players.indexOf(event.pubkey);
 	switch (command) {
 		case 'ron':
-			const content = `${tehai[i].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(tsumo)}:\nCongratulations!`;
-			const emoijTags = Array.from(new Set(tehai[i].concat(tsumo))).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
+			const content = `${tehai[i].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(sutehai)}:\nCongratulations!`;
+			const emoijTags = Array.from(new Set(tehai[i].concat(sutehai))).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
 			const tags = [...getTagsAirrep(event), ...emoijTags];
+			reset_game();
 			return [[content, tags]];
 		case 'no':
 		default:
@@ -413,16 +418,7 @@ const res_c_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, 
 		const tags = [...getTagsReply(event), ...emoijTags];
 		return [[content, tags]];
 	}
-	let sutehai;
-	const uniqTehai = new Set(tehai14);
-	const ankos = Array.from(uniqTehai).filter(pai => tehai14.reduce((sum, v) => v === pai ? sum + 1 : sum, 0) >= 3);
-	const koritsus = Array.from(uniqTehai).filter(pai => tehai14.reduce((sum, v) => v === pai ? sum + 1 : sum, 0) == 1);
-	if (ankos.length > 0) {
-		sutehai = any(ankos);
-	}
-	else {
-		sutehai = any(koritsus);
-	}
+	const sutehai = naniwokiru(tehai[i].join(''), tsumo);
 	const content = `nostr:${nip19.npubEncode(event.pubkey)} sutehai? sutehai ${sutehai}\n:${convertEmoji(sutehai)}:`;
 	const tags = [...getTagsReply(event), ['emoji', convertEmoji(sutehai), getEmojiUrl(sutehai)]];
 	return [[content, tags]];
@@ -439,6 +435,7 @@ const reset_game = () => {
 	yama = [];
 	nYamaIndex = 0;
 	tehai = [];
+	sutehai = '';
 	tsumo = '';
 };
 
