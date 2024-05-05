@@ -5,7 +5,7 @@ import { relayUrl } from './config';
 import { getShanten } from './mj_shanten';
 import { naniwokiru } from './mj_core';
 import { getScore } from './mj_score';
-import { compareFn } from './mj_common';
+import { compareFn, getDoraFromDorahyouji, paikind } from './mj_common';
 
 export const getResponseEvent = async (requestEvent: NostrEvent, signer: Signer, mode: Mode, pool: SimplePool): Promise<VerifiedEvent[] | null> => {
 	if (requestEvent.pubkey === signer.getPublicKey()) {
@@ -266,12 +266,6 @@ const getTagsReply = (event: NostrEvent): string[][] => {
 };
 
 const players: string[] = [];
-let yama: string[] = [];
-let nYamaIndex = 0;
-let tehai: string[][] = [];
-let tsumo: string;
-let sutehai: string;
-
 const res_s_gamestart = (event: NostrEvent): [string, string[][]][] | null => {
 	reset_game();
 	players.push(event.pubkey);
@@ -287,33 +281,122 @@ const res_s_join = (event: NostrEvent): [string, string[][]][] | null => {
 	}
 	players.push(event.pubkey);
 	if (players.length === 4) {
-		const res: [string, string[][]][] = [];
-		const content = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} gamestart (ここにゲーム開始時に通知すべき情報が入る)`;
-		const tags = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
-		res.push([content, tags]);
-		yama = shuffle([...paikind, ...paikind, ...paikind, ...paikind]);
-		for (let i = 0; i <= 3; i++) {
-			tehai[i] = yama.slice(0 + 13*i, 13 + 13*i);
-			tehai[i].sort(compareFn);
-			const content = `nostr:${nip19.npubEncode(players[i])} haipai\n${tehai[i].map(pi => `:${convertEmoji(pi)}:`).join('')}`;
-			const emoijTags = Array.from(new Set(tehai[i])).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
-			const tags = [...getTagsAirrep(event), ['p', players[i], ''], ...emoijTags];
-			res.push([content, tags]);
-		}
-		nYamaIndex = 66;//王牌14枚(from 52 to 65)抜く
-		tsumo = yama[nYamaIndex];
-		nYamaIndex++
-		const content2 = `NOTIFY tsumo nostr:${nip19.npubEncode(players[0])} ${yama.length - nYamaIndex} ${tsumo}\n${tehai[0].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(tsumo)}:\nGET sutehai?`;
-		const emoijTags = Array.from(new Set(tehai[0].concat(tsumo))).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
-		const tags2 = [...getTagsAirrep(event), ['p', players[0], ''], ...emoijTags];
-		res.push([content2, tags2]);
-		return res;
+		return mahjongGameStart(event);
 	}
 	return null;
 };
 
+let arScore: number[];
+let tsumibou: number;
+let kyotaku: number;
+let bafu: number;
+let kyoku: number;
+let oyaIndex: number;
+const mahjongGameStart = (event: NostrEvent): [string, string[][]][] => {
+	const res: [string, string[][]][] = [];
+	arScore = [25000, 25000, 25000, 25000];
+	tsumibou = 0;
+	kyotaku = 0;
+	bafu = 0;
+	kyoku = 1;
+	oyaIndex = Math.floor(Math.random() * 4);
+	const seki = ['東', '南', '西', '北'];
+	const dSeki = new Map<string, string>();
+	const pNames: string[] = [];
+	for (let i = 0; i < players.length; i++) {
+		pNames.push(players[(i + oyaIndex) % 4]);
+	}
+	for (let i = 0; i < pNames.length; i++) {
+		dSeki.set(pNames[i], seki[i]);
+	}
+	for (let i = 0; i < players.length; i++) {
+		const content = `nostr:${nip19.npubEncode(players[i])} NOTIFY gamestart ${dSeki.get(players[i])} ${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')}`;
+		const tags = [...getTagsAirrep(event), ['p', players[i], '']];
+		res.push([content, tags]);
+	}
+	return [...res, ...startKyoku(event)];
+};
+
+let arYama: string[] = [];
+let arKawa: string[][];
+let arFuritenCheckRichi: string[][];
+let arFuritenCheckTurn: string[][];
+let arRichiJunme: number[];
+let arFuroJunme: number[][];
+let arFuroHistory: [string, number][][];
+let arKakanHistory: string[][];
+let isRinshanChance: boolean;
+let arIppatsuChance: boolean[];
+let arChihouChance: boolean[];
+let arWRichi: boolean[];
+let dorahyouji: string;
+let visiblePai: string;
+let nYamaIndex = 0;
+let tehai: string[][] = [];
+let tsumo: string;
+let sutehai: string;
+let reservedNaku: Map<string, string>;
+let reservedTenpai: Map<string, string>;
+let dResponseNeed: Map<string, string>;
+const arBafu = ['東', '南'];
+
+const startKyoku = (event: NostrEvent): [string, string[][]][] => {
+	const res: [string, string[][]][] = [];
+	arYama = shuffle([...paikind, ...paikind, ...paikind, ...paikind]);
+	for (let i = 0; i < players.length; i++) {
+		tehai[i] = arYama.slice(0 + 13*i, 13 + 13*i);
+		tehai[i].sort(compareFn);
+	}
+	arKawa = [[], [], [], []];
+	arFuritenCheckRichi = [[], [], [], []];
+	arFuritenCheckTurn = [[], [], [], []];
+	arRichiJunme = [-1, -1, -1, -1];
+	arFuroJunme = [[], [], [], []];
+	arFuroHistory = [[], [], [], []];
+	arKakanHistory = [[], [], [], []];
+	isRinshanChance = false;
+	arIppatsuChance = [false, false, false, false];
+	arChihouChance = [true, true, true, true];
+	arWRichi = [false, false, false, false];
+	dorahyouji = arYama[52];
+	visiblePai = dorahyouji;
+	nYamaIndex = 66;//王牌14枚(from 52 to 65)抜く
+	reservedNaku = new Map<string, string>();
+	reservedTenpai = new Map<string, string>();
+	dResponseNeed = new Map<string, string>();
+	tsumo = arYama[nYamaIndex++];
+	let s: string = '';
+	//kyokustart通知
+	const content = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY kyokustart ${arBafu[bafu]} nostr:${players[oyaIndex]} ${tsumibou} ${kyotaku}`;
+	const tags = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+	res.push([content, tags]);
+	//point通知
+	for (let i = 0; i < players.length; i++) {
+		const content = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY point nostr:${players[i]} = ${arScore[i]}`;
+		const tags = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+		res.push([content, tags]);
+	}
+	//haipai通知
+	for (let i = 0; i <= 3; i++) {
+		const content = `nostr:${nip19.npubEncode(players[i])} NOTIFY haipai\n${tehai[i].map(pi => `:${convertEmoji(pi)}:`).join('')}`;
+		const emoijTags = Array.from(new Set(tehai[i])).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
+		const tags = [...getTagsAirrep(event), ['p', players[i], ''], ...emoijTags];
+		res.push([content, tags]);
+	}
+	//dora通知
+	const content_dora = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY dora ${dorahyouji}`;
+	const tags_dora = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+	res.push([content_dora, tags_dora]);
+	//ツモ通知 捨て牌要求
+	const content_sutehai = `NOTIFY tsumo nostr:${nip19.npubEncode(players[oyaIndex])} ${arYama.length - nYamaIndex} ${tsumo}\n${tehai[oyaIndex].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(tsumo)}:\nGET sutehai?`;
+	const emoijTags_sutehai = Array.from(new Set(tehai[oyaIndex].concat(tsumo))).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
+	const tags_sutehai = [...getTagsAirrep(event), ['p', players[oyaIndex], ''], ...emoijTags_sutehai];
+	res.push([content_sutehai, tags_sutehai]);
+	return res;
+};
+
 const getScoreView = (i: number, atarihai: string, isTsumo: boolean) => {
-	const r = getScore(tehai[i].join(''), atarihai, '1z', ['1z', '2z', '3z', '4z'][i], '', isTsumo);
+	const r = getScore(tehai[i].join(''), atarihai, ['1z', '2z'][bafu], getJifuHai(i), getDoraFromDorahyouji(dorahyouji), isTsumo);
 	let content = '';
 	if (r[2].size > 0) {
 		for (const [k, v] of r[2]) {
@@ -331,6 +414,19 @@ const getScoreView = (i: number, atarihai: string, isTsumo: boolean) => {
 	content	+= `${r[0]}点\n `
 		+ `nostr:${nip19.npubEncode(players[i])} +${r[0]}`;
 	return content;
+};
+
+const getJifuHai = (nPlayer: number): string => {
+	const seki = ['1z', '2z', '3z', '4z'];
+	const dSeki = new Map<string, string>();
+	const pNames: string[] = [];
+	for (let i = 0; i < players.length; i++) {
+		pNames.push(players[(i + oyaIndex) % 4]);
+	}
+	for (let i = 0; i < pNames.length; i++) {
+		dSeki.set(pNames[i], seki[i]);
+	}
+	return dSeki.get(players[nPlayer]) ?? '';
 };
 
 const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, string[][]][] | null => {
@@ -382,15 +478,15 @@ const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, 
 	if (naku.length > 0) {
 		return naku;
 	}
-	if (yama[nYamaIndex] === undefined) {
+	if (arYama[nYamaIndex] === undefined) {
 		const content = `ryukyoku`;
 		const tags = getTagsAirrep(event);
 		return [[content, tags]];
 	}
-	tsumo = yama[nYamaIndex];
+	tsumo = arYama[nYamaIndex];
 	nYamaIndex++
 	const i2 = (i + 1) % 4;
-	const content = `NOTIFY tsumo nostr:${nip19.npubEncode(players[i2])} ${yama.length - nYamaIndex} ${tsumo}\n${tehai[i2].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(tsumo)}:\nGET sutehai?`;
+	const content = `NOTIFY tsumo nostr:${nip19.npubEncode(players[i2])} ${arYama.length - nYamaIndex} ${tsumo}\n${tehai[i2].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(tsumo)}:\nGET sutehai?`;
 	const emoijTags = Array.from(new Set(tehai[i2].concat(tsumo))).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
 	const tags = [...getTagsAirrep(event), ['p', players[i2], ''], ...emoijTags];
 	return [[content, tags]];
@@ -457,19 +553,25 @@ const res_c_naku = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, str
 
 const reset_game = () => {
 	players.length = 0;
-	yama = [];
-	nYamaIndex = 0;
+	arYama = [];
 	tehai = [];
+	arKawa = [[], [], [], []];
+	arFuritenCheckRichi = [[], [], [], []];
+	arFuritenCheckTurn = [[], [], [], []];
+	arRichiJunme = [-1, -1, -1, -1];
+	arFuroJunme = [[], [], [], []];
+	arFuroHistory = [[], [], [], []];
+	arKakanHistory = [[], [], [], []];
+	isRinshanChance = false;
+	arIppatsuChance = [false, false, false, false];
+	arChihouChance = [true, true, true, true];
+	arWRichi = [true, true, true, true];
+	dorahyouji = '';
+	visiblePai = '';
+	nYamaIndex = 0;
 	sutehai = '';
 	tsumo = '';
 };
-
-const paikind = [
-	'1m', '2m', '3m', '4m', '5m', '6m', '7m', '8m', '9m',
-	'1p', '2p', '3p', '4p', '5p', '6p', '7p', '8p', '9p',
-	'1s', '2s', '3s', '4s', '5s', '6s', '7s', '8s', '9s',
-	'1z', '2z', '3z', '4z', '5z', '6z', '7z',
-];
 
 const shuffle = (array: string[]) => { 
 	for (let i = array.length - 1; i > 0; i--) { 
@@ -517,38 +619,38 @@ const getEmojiUrl = (pai: string): string => {
 };
 
 const awayuki_mahjong_emojis: any = {
-	"mahjong_m1": "https://awayuki.github.io/emoji/mahjong-m1.png",
-	"mahjong_m2": "https://awayuki.github.io/emoji/mahjong-m2.png",
-	"mahjong_m3": "https://awayuki.github.io/emoji/mahjong-m3.png",
-	"mahjong_m4": "https://awayuki.github.io/emoji/mahjong-m4.png",
-	"mahjong_m5": "https://awayuki.github.io/emoji/mahjong-m5.png",
-	"mahjong_m6": "https://awayuki.github.io/emoji/mahjong-m6.png",
-	"mahjong_m7": "https://awayuki.github.io/emoji/mahjong-m7.png",
-	"mahjong_m8": "https://awayuki.github.io/emoji/mahjong-m8.png",
-	"mahjong_m9": "https://awayuki.github.io/emoji/mahjong-m9.png",
-	"mahjong_p1": "https://awayuki.github.io/emoji/mahjong-p1.png",
-	"mahjong_p2": "https://awayuki.github.io/emoji/mahjong-p2.png",
-	"mahjong_p3": "https://awayuki.github.io/emoji/mahjong-p3.png",
-	"mahjong_p4": "https://awayuki.github.io/emoji/mahjong-p4.png",
-	"mahjong_p5": "https://awayuki.github.io/emoji/mahjong-p5.png",
-	"mahjong_p6": "https://awayuki.github.io/emoji/mahjong-p6.png",
-	"mahjong_p7": "https://awayuki.github.io/emoji/mahjong-p7.png",
-	"mahjong_p8": "https://awayuki.github.io/emoji/mahjong-p8.png",
-	"mahjong_p9": "https://awayuki.github.io/emoji/mahjong-p9.png",
-	"mahjong_s1": "https://awayuki.github.io/emoji/mahjong-s1.png",
-	"mahjong_s2": "https://awayuki.github.io/emoji/mahjong-s2.png",
-	"mahjong_s3": "https://awayuki.github.io/emoji/mahjong-s3.png",
-	"mahjong_s4": "https://awayuki.github.io/emoji/mahjong-s4.png",
-	"mahjong_s5": "https://awayuki.github.io/emoji/mahjong-s5.png",
-	"mahjong_s6": "https://awayuki.github.io/emoji/mahjong-s6.png",
-	"mahjong_s7": "https://awayuki.github.io/emoji/mahjong-s7.png",
-	"mahjong_s8": "https://awayuki.github.io/emoji/mahjong-s8.png",
-	"mahjong_s9": "https://awayuki.github.io/emoji/mahjong-s9.png",
-	"mahjong_east": "https://awayuki.github.io/emoji/mahjong-east.png",
-	"mahjong_south": "https://awayuki.github.io/emoji/mahjong-south.png",
-	"mahjong_west": "https://awayuki.github.io/emoji/mahjong-west.png",
-	"mahjong_north": "https://awayuki.github.io/emoji/mahjong-north.png",
-	"mahjong_white": "https://awayuki.github.io/emoji/mahjong-white.png",
-	"mahjong_green": "https://awayuki.github.io/emoji/mahjong-green.png",
-	"mahjong_red": "https://awayuki.github.io/emoji/mahjong-red.png",
+	'mahjong_m1': 'https://awayuki.github.io/emoji/mahjong-m1.png',
+	'mahjong_m2': 'https://awayuki.github.io/emoji/mahjong-m2.png',
+	'mahjong_m3': 'https://awayuki.github.io/emoji/mahjong-m3.png',
+	'mahjong_m4': 'https://awayuki.github.io/emoji/mahjong-m4.png',
+	'mahjong_m5': 'https://awayuki.github.io/emoji/mahjong-m5.png',
+	'mahjong_m6': 'https://awayuki.github.io/emoji/mahjong-m6.png',
+	'mahjong_m7': 'https://awayuki.github.io/emoji/mahjong-m7.png',
+	'mahjong_m8': 'https://awayuki.github.io/emoji/mahjong-m8.png',
+	'mahjong_m9': 'https://awayuki.github.io/emoji/mahjong-m9.png',
+	'mahjong_p1': 'https://awayuki.github.io/emoji/mahjong-p1.png',
+	'mahjong_p2': 'https://awayuki.github.io/emoji/mahjong-p2.png',
+	'mahjong_p3': 'https://awayuki.github.io/emoji/mahjong-p3.png',
+	'mahjong_p4': 'https://awayuki.github.io/emoji/mahjong-p4.png',
+	'mahjong_p5': 'https://awayuki.github.io/emoji/mahjong-p5.png',
+	'mahjong_p6': 'https://awayuki.github.io/emoji/mahjong-p6.png',
+	'mahjong_p7': 'https://awayuki.github.io/emoji/mahjong-p7.png',
+	'mahjong_p8': 'https://awayuki.github.io/emoji/mahjong-p8.png',
+	'mahjong_p9': 'https://awayuki.github.io/emoji/mahjong-p9.png',
+	'mahjong_s1': 'https://awayuki.github.io/emoji/mahjong-s1.png',
+	'mahjong_s2': 'https://awayuki.github.io/emoji/mahjong-s2.png',
+	'mahjong_s3': 'https://awayuki.github.io/emoji/mahjong-s3.png',
+	'mahjong_s4': 'https://awayuki.github.io/emoji/mahjong-s4.png',
+	'mahjong_s5': 'https://awayuki.github.io/emoji/mahjong-s5.png',
+	'mahjong_s6': 'https://awayuki.github.io/emoji/mahjong-s6.png',
+	'mahjong_s7': 'https://awayuki.github.io/emoji/mahjong-s7.png',
+	'mahjong_s8': 'https://awayuki.github.io/emoji/mahjong-s8.png',
+	'mahjong_s9': 'https://awayuki.github.io/emoji/mahjong-s9.png',
+	'mahjong_east': 'https://awayuki.github.io/emoji/mahjong-east.png',
+	'mahjong_south': 'https://awayuki.github.io/emoji/mahjong-south.png',
+	'mahjong_west': 'https://awayuki.github.io/emoji/mahjong-west.png',
+	'mahjong_north': 'https://awayuki.github.io/emoji/mahjong-north.png',
+	'mahjong_white': 'https://awayuki.github.io/emoji/mahjong-white.png',
+	'mahjong_green': 'https://awayuki.github.io/emoji/mahjong-green.png',
+	'mahjong_red': 'https://awayuki.github.io/emoji/mahjong-red.png',
 };

@@ -95,7 +95,7 @@ export const uniq = (ary: string[][]) => {
 	return ret;
 };
 
-const paikind = [
+export const paikind = [
 	'1m', '2m', '3m', '4m', '5m', '6m', '7m', '8m', '9m',
 	'1p', '2p', '3p', '4p', '5p', '6p', '7p', '8p', '9p',
 	'1s', '2s', '3s', '4s', '5s', '6s', '7s', '8s', '9s',
@@ -110,4 +110,44 @@ export const compareFn = (a: string, b: string) => {
 		return 1;
 	}
 	return 0;
+};
+
+export const getDoraFromDorahyouji = (hai: string): string => {
+	const d = new Map<string, string>([
+		['1m', '2m'],
+		['2m', '3m'],
+		['3m', '4m'],
+		['4m', '5m'],
+		['5m', '6m'],
+		['6m', '7m'],
+		['7m', '8m'],
+		['8m', '9m'],
+		['9m', '1m'],
+		['1p', '2p'],
+		['2p', '3p'],
+		['3p', '4p'],
+		['4p', '5p'],
+		['5p', '6p'],
+		['6p', '7p'],
+		['7p', '8p'],
+		['8p', '9p'],
+		['9p', '1p'],
+		['1s', '2s'],
+		['2s', '3s'],
+		['3s', '4s'],
+		['4s', '5s'],
+		['5s', '6s'],
+		['6s', '7s'],
+		['7s', '8s'],
+		['8s', '9s'],
+		['9s', '1s'],
+		['1z', '2z'],
+		['2z', '3z'],
+		['3z', '4z'],
+		['4z', '1z'],
+		['5z', '6z'],
+		['6z', '7z'],
+		['7z', '5z']
+	]);
+	return d.get(hai) ?? '';
 };
