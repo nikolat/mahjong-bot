@@ -91,13 +91,9 @@ const main = async () => {
 		console.info(`REQ from ${nip19.npubEncode(ev.pubkey)}\n${ev.content}`);
 		if (responseEvents.length > 0) {
 			for (const responseEvent of responseEvents) {
-				try {
-					const results = await Promise.allSettled(pool.publish(relayUrl, responseEvent));
-					console.info(`RES from ${nip19.npubEncode(responseEvent.pubkey)}\n${responseEvent.content}`);
-					console.log(results);
-				} catch (error) {
-					console.log(error);
-				}
+				const results = await Promise.allSettled(pool.publish(relayUrl, responseEvent));
+				console.info(`RES from ${nip19.npubEncode(responseEvent.pubkey)}\n${responseEvent.content}`);
+				console.log(results);
 				await sleep(100);
 			}
 		}
