@@ -289,7 +289,7 @@ const getCompositionRecursion = (hai: number[], n: number, composition_a: number
 				}
 				ret_a.push(t);
 			}
-			if (composition_a.length === 0 && ret_a.length === 0)
+			if (composition_a.length === 0)
 				ret_a.push(tkelm);
 			for (const retbelm of composition_b) {
 				const t = structuredClone(retbelm);
@@ -298,7 +298,7 @@ const getCompositionRecursion = (hai: number[], n: number, composition_a: number
 				}
 				ret_b.push(t);
 			}
-			if (composition_b.length === 0 && ret_b.length === 0)
+			if (composition_b.length === 0)
 				ret_b.push(tkelm);
 		}
 		max = [ [ 0, count_tatsu ], [ 0, count_tatsu ] ];

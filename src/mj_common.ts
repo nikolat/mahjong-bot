@@ -87,7 +87,7 @@ export const uniq = (ary: string[][]) => {
 	for (let elm of ary) {
 		const key = removeElementByName(elm, '', 1);
 		key.sort();
-		if (!retCheck.includes(key.join(''))) {
+		if (!retCheck.includes(key.join(','))) {
 			retCheck.push(key.join(','));
 			ret.push(elm);
 		}
