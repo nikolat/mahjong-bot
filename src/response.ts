@@ -181,7 +181,7 @@ const isAllowedToPost = (event: NostrEvent) => {
 const getResmap = (mode: Mode): [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp, signer: Signer, pool: SimplePool) => [string, string[][]][] | null | Promise<null>][] => {
 	const resmapServer: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => [string, string[][]][] | null][] = [
 		[/ping$/, res_ping],
-		[/gamestart$/, res_s_gamestart],
+		[/^(nostr:npub1\w{58}\s+)?gamestart/, res_s_gamestart],
 		[/join$/, res_s_join],
 		[/sutehai\?\s(sutehai|ankan|kakan|richi|tsumo)\s?([1-9][mpsz])?/, res_s_sutehai],
 		[/^(sutehai\?)?([1-9][mpsz])/, res_s_sutehai],
