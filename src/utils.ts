@@ -6,6 +6,7 @@ export const enum Mode {
 	Server,
 	Client,
 	Unyu,
+	Unknown,
 };
 
 export const buffer = async (readable: Readable) => {

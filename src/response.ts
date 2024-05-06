@@ -192,6 +192,7 @@ const getResmap = (mode: Mode): [RegExp, (event: NostrEvent, mode: Mode, regstr:
 	const resmapClient: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => [string, string[][]][] | null][] = [
 		[/ping$/, res_ping],
 		[/join$/, res_c_join],
+		[/gamestart$/, res_c_gamestart],
 		[/NOTIFY\stsumo\snostr:npub1\w{58}\s\d+\s([0-9][mpsz]).+GET\ssutehai\?$/s, res_c_sutehai],
 		[/GET\snaku\?\s(ron|kan|pon|chi)$/s, res_c_naku],
 	];
@@ -579,6 +580,11 @@ const res_s_reset = (event: NostrEvent): [string, string[][]][] | null => {
 const res_c_join = (event: NostrEvent): [string, string[][]][] => {
 	const npub_jongbari = 'npub1j0ng5hmm7mf47r939zqkpepwekenj6uqhd5x555pn80utevvavjsfgqem2';
 	return [[`nostr:${npub_jongbari} join`, [...getTagsAirrep(event), ['p', nip19.decode(npub_jongbari).data, '']]]];
+};
+
+const res_c_gamestart = (event: NostrEvent): [string, string[][]][] => {
+	const npub_jongbari = 'npub1j0ng5hmm7mf47r939zqkpepwekenj6uqhd5x555pn80utevvavjsfgqem2';
+	return [[`nostr:${npub_jongbari} gamestart`, [...getTagsAirrep(event), ['p', nip19.decode(npub_jongbari).data, '']]]];
 };
 
 const res_c_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, string[][]][] => {
