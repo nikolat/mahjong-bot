@@ -262,8 +262,8 @@ const separateColor = (haiArray: string[]) => {
 const getComposition = (haiArray: string[]): number[][][] => {
 	const hai_count_array = numArrayToCountArray(stringArrayToNumArray(haiArray));
 	const start = 1;
-	let composition_a: number[][][] = [[]];
-	let composition_b: number[][][] = [[]];
+	let composition_a: number[][][] = [];
+	let composition_b: number[][][] = [];
 	let max: number[][];
 	[max, composition_a, composition_b] = getCompositionRecursion(hai_count_array, start, composition_a, composition_b);
 	const ret: number[][][] = [...composition_a, ...composition_b];
@@ -283,17 +283,23 @@ const getCompositionRecursion = (hai: number[], n: number, composition_a: number
 		ret_b = [];
 		for (const tkelm of ret_tatsu_and_koritsu) {
 			for (const retaelm of composition_a) {
+				const t = structuredClone(retaelm);
 				for (const tkelmelm of tkelm) {
-					retaelm.push(tkelmelm);
+					t.push(tkelmelm);
 				}
-				ret_a.push(retaelm);
+				ret_a.push(t);
 			}
+			if (composition_a.length === 0 && ret_a.length === 0)
+				ret_a.push(tkelm);
 			for (const retbelm of composition_b) {
+				const t = structuredClone(retbelm);
 				for (const tkelmelm of tkelm) {
-					retbelm.push(tkelmelm);
+					t.push(tkelmelm);
 				}
-				ret_b.push(retbelm);
+				ret_b.push(t);
 			}
+			if (composition_b.length === 0 && ret_b.length === 0)
+				ret_b.push(tkelm);
 		}
 		max = [ [ 0, count_tatsu ], [ 0, count_tatsu ] ];
 		return [ max, ret_a, ret_b ];
@@ -306,6 +312,10 @@ const getCompositionRecursion = (hai: number[], n: number, composition_a: number
 	if (n <= 7 && hai[n] > 0 && hai[n + 1] > 0 && hai[n + 2] > 0) {
 		let ret_a_shuntsu: number[][][] = structuredClone(composition_a);
 		let ret_b_shuntsu: number[][][] = structuredClone(composition_b);
+		if (ret_a_shuntsu.length === 0)
+			ret_a_shuntsu.push([]);
+		if (ret_b_shuntsu.length === 0)
+			ret_b_shuntsu.push([]);
 		hai[n]--; hai[n + 1]--; hai[n + 2]--;
 		for (let i = 0; i < ret_a_shuntsu.length; i++) {
 			ret_a_shuntsu[i].push([ n, n + 1, n + 2 ]);
@@ -342,6 +352,10 @@ const getCompositionRecursion = (hai: number[], n: number, composition_a: number
 	if (hai[n] >= 3) {
 		let ret_a_kotsu: number[][][] = structuredClone(composition_a);
 		let ret_b_kotsu: number[][][] = structuredClone(composition_b);
+		if (ret_a_kotsu.length === 0)
+			ret_a_kotsu.push([]);
+		if (ret_b_kotsu.length === 0)
+			ret_b_kotsu.push([]);
 		hai[n] -= 3;
 		for (let i = 0; i < ret_a_kotsu.length; i++) {
 			ret_a_kotsu[i].push([ n, n, n ]);
@@ -383,15 +397,15 @@ const getTatsuAndKoritsu = (hai: number[], n: number, ret_tatsu_and_koritsu: num
 	//搭子/対子の抜き取りが終わったら孤立牌を加える
 	if (n > 9) {
 		const koritsu: number[] = countArrayToNumArray(hai);
-		ret = ret_tatsu_and_koritsu;
+		ret = structuredClone(ret_tatsu_and_koritsu);
 		if (koritsu.length > 0) {
 			const ret_koritsu: number[][][] = [];
-			for (const er of ret_tatsu_and_koritsu) {
+			for (const er of structuredClone(ret_tatsu_and_koritsu)) {
+				const a: number[][] = er;
 				for (const ek of koritsu) {
-					const a: number[][] = er;
 					a.push([ ek ]);
-					ret_koritsu.push(a);
 				}
+				ret_koritsu.push(a);
 			}
 			ret = ret_koritsu;
 		}
@@ -406,6 +420,8 @@ const getTatsuAndKoritsu = (hai: number[], n: number, ret_tatsu_and_koritsu: num
 	if (n <= 7 && hai[n] > 0 && hai[n + 2] > 0) {
 		let ret1: number[][][] = structuredClone(ret_tatsu_and_koritsu);
 		hai[n]--; hai[n + 2]--;
+		if (ret1.length === 0)
+			ret1.push([]);
 		for (let i = 0; i < ret1.length; i++) {
 			ret1[i].push([ n, n + 2 ]);
 		}
@@ -429,6 +445,8 @@ const getTatsuAndKoritsu = (hai: number[], n: number, ret_tatsu_and_koritsu: num
 	if (n <= 8 && hai[n] > 0 && hai[n + 1] > 0) {
 		let ret2: number[][][] = structuredClone(ret_tatsu_and_koritsu);
 		hai[n]--; hai[n + 1]--;
+		if (ret2.length === 0)
+			ret2.push([]);
 		for (let i = 0; i < ret2.length; i++) {
 			ret2[i].push([ n, n + 1 ]);
 		}
@@ -452,6 +470,8 @@ const getTatsuAndKoritsu = (hai: number[], n: number, ret_tatsu_and_koritsu: num
 	if (hai[n] >= 2) {
 		let ret3: number[][][] = structuredClone(ret_tatsu_and_koritsu);
 		hai[n] -= 2;
+		if (ret3.length === 0)
+			ret3.push([]);
 		for (let i = 0; i < ret3.length; i++) {
 			ret3[i].push([ n, n ]);
 		}
