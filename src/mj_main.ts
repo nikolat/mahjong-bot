@@ -136,7 +136,8 @@ const startKyoku = (event: NostrEvent): [string, string[][]][] => {
 };
 
 const getScoreView = (i: number, atarihai: string, isTsumo: boolean) => {
-	const r = getScore(tehai[i].join(''), atarihai, ['1z', '2z'][bafu], getJifuHai(i), getDoraFromDorahyouji(dorahyouji), isTsumo);
+	const richi: number = arRichiJunme[i] == 0 ? 2 : arRichiJunme[i] >= 0 ? 1 : 0;
+	const r = getScore(tehai[i].join(''), atarihai, ['1z', '2z'][bafu], getJifuHai(i), getDoraFromDorahyouji(dorahyouji), isTsumo, richi);
 	let content = '';
 	if (r[2].size > 0) {
 		for (const [k, v] of r[2]) {
