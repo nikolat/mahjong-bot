@@ -102,7 +102,7 @@ export const getScore = (
 		const n = hai_normal.reduce((accumulator: number, currentValue: string): number => {
 			return accumulator + (currentValue === agari_hai ? 1 : 0);
 		}, 0);
-		if (n == 1 || n == 3) {
+		if (n === 1 || n === 3) {
 			ret_yakuman.set('九蓮宝燈', 2);
 		}
 		else {
@@ -112,7 +112,7 @@ export const getScore = (
 	if (is_normal && isChinroutou(hai_plain)) {
 		ret_yakuman.set('清老頭', 1);
 	}
-	if (count_kantsu == 4) {
+	if (count_kantsu === 4) {
 		ret_yakuman.set('四槓子', 1);
 	}
 	//役判定
@@ -122,7 +122,7 @@ export const getScore = (
 	if (richi === 2) {
 		ret_han.set('W立直', 2);
 	}
-	else if (richi == 1) {
+	else if (richi === 1) {
 		ret_han.set('立直', 1);
 	}
 	if (is_ippatsu) {

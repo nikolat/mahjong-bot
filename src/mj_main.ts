@@ -136,7 +136,7 @@ const startKyoku = (event: NostrEvent): [string, string[][]][] => {
 };
 
 const getScoreView = (i: number, atarihai: string, isTsumo: boolean) => {
-	const richi: number = arRichiJunme[i] == 0 ? 2 : arRichiJunme[i] >= 0 ? 1 : 0;
+	const richi: number = arRichiJunme[i] === 0 ? 2 : arRichiJunme[i] > 0 ? 1 : 0;
 	const r = getScore(tehai[i].join(''), atarihai, ['1z', '2z'][bafu], getJifuHai(i), getDoraFromDorahyouji(dorahyouji), isTsumo, richi);
 	let content = '';
 	if (r[2].size > 0) {
@@ -203,6 +203,8 @@ export const res_s_sutehai_call = (event: NostrEvent, command: string, pai: stri
 		default:
 			throw new TypeError(`command ${command} is not supported`);
 	}
+	isRinshanChance = false;
+	setSutehai(sutehai, i);
 	tehai[i].push(tsumo);
 	tehai[i].splice(tehai[i].indexOf(pai), 1);
 	tehai[i].sort(compareFn);//fixme
@@ -219,6 +221,19 @@ export const res_s_sutehai_call = (event: NostrEvent, command: string, pai: stri
 	}
 	return [...res, ...sendNextTurn(event)];
 };
+
+const setSutehai = (sute: string, nPlayer: number) => {
+	arKawa[nPlayer].push(sute);
+	visiblePai += sute;
+	for (let i = 0; i < players.length; i++) {
+		if (arRichiJunme[i] >= 0)
+			arFuritenCheckRichi[i].push(sute);
+		if (nPlayer === i)
+			arFuritenCheckTurn[i] = [];
+		else
+			arFuritenCheckTurn[i].push(sute);
+	}
+}
 
 const sendNextTurn = (event: NostrEvent): [string, string[][]][] => {
 	if (arYama[nYamaIndex] === undefined) {
