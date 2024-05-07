@@ -1,9 +1,9 @@
 import { type NostrEvent, nip19 } from 'nostr-tools';
-import { getShanten } from './mj_shanten';
-import { naniwokiru } from './mj_core';
-import { getScore } from './mj_score';
-import { compareFn, getDoraFromDorahyouji, paikind, stringToArrayWithFuro } from './mj_common';
-import { getMachi } from './mj_machi';
+import { getShanten } from './mjlib/mj_shanten';
+import { naniwokiru } from './mjlib/mj_core';
+import { getScore } from './mjlib/mj_score';
+import { compareFn, getDoraFromDorahyouji, paikind, stringToArrayWithFuro } from './mjlib/mj_common';
+import { getMachi } from './mjlib/mj_machi';
 import { getTagsAirrep, getTagsReply } from './utils';
 
 export const res_s_gamestart_call = (pubkey: string): void => {
