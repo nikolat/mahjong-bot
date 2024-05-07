@@ -1,6 +1,6 @@
 import { type NostrEvent, nip19 } from 'nostr-tools';
 import { getShanten } from './mjlib/mj_shanten';
-import { naniwokiru } from './mjlib/mj_core';
+import { naniwokiru, shouldRichi } from './mjlib/mj_core';
 import { getScore } from './mjlib/mj_score';
 import { compareFn, getDoraFromDorahyouji, paikind, stringToArrayWithFuro } from './mjlib/mj_common';
 import { getMachi } from './mjlib/mj_machi';
@@ -170,6 +170,7 @@ const getJifuHai = (nPlayer: number): string => {
 };
 
 export const res_s_sutehai_call = (event: NostrEvent, command: string, pai: string): [string, string[][]][] => {
+	const res: [string, string[][]][] = [];
 	const i = players.indexOf(event.pubkey);
 	currentPlayer = i;
 	switch (command) {
@@ -184,17 +185,26 @@ export const res_s_sutehai_call = (event: NostrEvent, command: string, pai: stri
 			else {
 				const content = 'You cannot tsumo.';
 				const tags = getTagsReply(event);
-				return [[content, tags]];
+				return [[content, tags]];//fixme
 			}
-		case 'sutehai':
-			tehai[i].push(tsumo);
-			tehai[i].splice(tehai[i].indexOf(pai), 1);
-			tehai[i].sort(compareFn);
+		case 'richi':
+			arRichiJunme[i] = arKawa[i].length;
+			const content = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY say nostr:${nip19.npubEncode(players[i])} richi`;
+			const tags = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+			res.push([content, tags]);
 			sutehai = pai;
 			break;
+		case 'sutehai':
+			sutehai = pai;
+			break;
+		case 'ankan':
+		case 'kakan':
 		default:
 			throw new TypeError(`command ${command} is not supported`);
 	}
+	tehai[i].push(tsumo);
+	tehai[i].splice(tehai[i].indexOf(pai), 1);
+	tehai[i].sort(compareFn);//fixme
 	const naku: [string, string[][]][] = [];
 	for (const index of [0, 1, 2, 3].filter(idx => idx !== i)) {
 		if (canRon(index, pai)) {
@@ -204,9 +214,9 @@ export const res_s_sutehai_call = (event: NostrEvent, command: string, pai: stri
 		}
 	}
 	if (naku.length > 0) {
-		return naku;
+		return [...res, ...naku];
 	}
-	return sendNextTurn(event);
+	return [...res, ...sendNextTurn(event)];
 };
 
 const sendNextTurn = (event: NostrEvent): [string, string[][]][] => {
@@ -215,8 +225,7 @@ const sendNextTurn = (event: NostrEvent): [string, string[][]][] => {
 		const tags = getTagsAirrep(event);
 		return [[content, tags]];
 	}
-	tsumo = arYama[nYamaIndex];
-	nYamaIndex++
+	tsumo = arYama[nYamaIndex++];
 	const i2 = (currentPlayer + 1) % 4;
 	const content = `NOTIFY tsumo nostr:${nip19.npubEncode(players[i2])} ${arYama.length - nYamaIndex} ${tsumo}\n${tehai[i2].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(tsumo)}:\nGET sutehai?`;
 	const tags = [...getTagsAirrep(event), ['p', players[i2], ''], ...getTagsEmoji(tehai[i2].concat(tsumo))];
@@ -295,15 +304,33 @@ const canRon = (nPlayer: number, atariHai: string): boolean => {
 
 export const res_c_sutehai_call = (event: NostrEvent, tsumo: string): [string, string[][]][] => {
 	const i = players.indexOf(event.tags.filter(tag => tag.length >= 2 && tag[0] === 'p').map(tag => tag[1])[0]);
-	const tehai14 = tehai[i].concat(tsumo);
-	const [shanten, _] = getShanten(tehai14.join(''));
+	const [shanten, _] = getShanten(tehai[i].concat(tsumo).join(''));
+	const isRichi = arRichiJunme[i] >= 0;
+	let action: string;
+	let select: string;
+	let sutehai = '';
+	if (shanten >= 0) {
+		if (isRichi) {//リーチ済ならツモ切り
+			sutehai = tsumo;
+		}
+		else {
+			sutehai = naniwokiru(tehai[i].join(''), tsumo, undefined, ['1z', '2z'][bafu], getJifuHai(i), dorahyouji);
+		}
+	}
 	if (shanten === -1) {
 		const content = `nostr:${nip19.npubEncode(event.pubkey)} sutehai? tsumo\n:${convertEmoji(tsumo)}:`;
-		const tags = [...getTagsReply(event), ...getTagsEmoji(tehai14)];
+		const tags = [...getTagsReply(event), ...getTagsEmoji([tsumo])];
 		return [[content, tags]];
 	}
-	const sutehai = naniwokiru(tehai[i].join(''), tsumo, undefined, ['1z', '2z'][bafu], getJifuHai(i), dorahyouji);
-	const content = `nostr:${nip19.npubEncode(event.pubkey)} sutehai? sutehai ${sutehai}\n:${convertEmoji(sutehai)}:`;
+	else if (shouldRichi(tehai[i].join(''), shanten, isRichi, arYama.length - nYamaIndex, tsumo, sutehai)) {
+		action = 'richi';
+		select = sutehai;
+	}
+	else {
+		action = 'sutehai';
+		select = sutehai;
+	}
+	const content = `nostr:${nip19.npubEncode(event.pubkey)} sutehai? ${action} ${select}\n:${convertEmoji(sutehai)}:`;
 	const tags = [...getTagsReply(event), ...getTagsEmoji([sutehai])];
 	return [[content, tags]];
 };

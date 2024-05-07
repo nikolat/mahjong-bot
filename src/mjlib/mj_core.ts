@@ -113,3 +113,32 @@ export const naniwokiru = (
 const any = (array: string[]): string => {
 	return array[Math.floor(Math.random() * array.length)];
 };
+
+export const shouldRichi = (
+	strTehai13: string,
+	shanten: number,
+	isRichi: boolean,
+	nokori: number,
+	strTsumo: string,
+	dahai: string,
+	strBafuhai?: string,
+	strJifuhai?: string,
+	strDorahyouji?: string,
+): boolean => {
+	if (!canRichi(strTehai13, shanten, isRichi, nokori)) {
+		return false;
+	}
+	return true;
+};
+
+const canRichi = (
+	tehai: string,
+	shanten: number,
+	isRichi: boolean,
+	nokori: number,
+): boolean => {
+	if (!tehai.includes('<') && shanten === 0 && !isRichi && nokori >= 4) {
+		return true;
+	}
+	return false;
+};
