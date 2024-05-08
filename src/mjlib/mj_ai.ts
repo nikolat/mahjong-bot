@@ -14,7 +14,7 @@ export const naniwokiru = (
 	aryPlayerGenbutsu: string[],
 	strVisiblePai: string,
 ): string => {
-	const arVisiblePai: string = stringToArrayWithFuro(strVisiblePai)[0].join('');
+	const arVisiblePai: string[] = stringToArrayWithFuro(strVisiblePai)[0];
 	const arVisibleNum = [
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0,
