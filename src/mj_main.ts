@@ -344,7 +344,7 @@ export const res_c_sutehai_call = (event: NostrEvent, tsumo: string): [string, s
 		const tags = [...getTagsReply(event), ...getTagsEmoji([tsumo])];
 		return [[content, tags]];
 	}
-	else if (shouldRichi(tehai[i].join(''), shanten, isRichi, arYama.length - nYamaIndex, tsumo, sutehai)) {
+	else if (shouldRichi(tehai[i].join(''), shanten, isRichi, arYama.length - nYamaIndex, tsumo, sutehai, ['1z', '2z'][bafu], getJifuHai(i), dorahyouji)) {
 		action = 'richi';
 		select = sutehai;
 	}

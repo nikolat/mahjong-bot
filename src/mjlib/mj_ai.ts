@@ -14,11 +14,9 @@ export const naniwokiru = (
 	aryPlayerGenbutsu?: string[],
 	strVisiblePai?: string,
 ): string => {
-	const [arTehai13Normal, hai_furo, hai_ankan] = stringToArrayWithFuro(strTehai13);
-	const arTehai14Normal = arTehai13Normal.concat(strTsumo);
-	arTehai14Normal.sort(compareFn);
-	const strTehai14Normal = arTehai14Normal.join('') + hai_furo.map(h => `<${h}>`).join('') + hai_ankan.map(h => `(${h})`).join('');
-	const [_, arKoritsuhai] = removeKoritsuHai(arTehai14Normal);
+	const strTehai14 = addHai(strTehai13, strTsumo);
+	const arTehai14Normal = stringToArrayWithFuro(strTehai14)[0];
+	const arKoritsuhai = removeKoritsuHai(arTehai14Normal)[1];
 	const arSutehaiKouho = new Set(arTehai14Normal)
 	//ドラ
 	const arDorahyouji = stringToArrayWithFuro(strDorahyouji ?? '')[0];
@@ -26,8 +24,8 @@ export const naniwokiru = (
 	let arDahai: string[] = [];
 	let point = -1;
 	for (const sutehai of arSutehaiKouho) {
-		const strTehaiRemoved = strTehai14Normal.replace(new RegExp(sutehai), '');
-		const [shanten, _] = getShantenYaku(strTehaiRemoved, strBafuhai ?? '', strJifuhai ?? '');
+		const strTehaiRemoved = removeHai(strTehai14, sutehai);
+		const shanten = getShantenYaku(strTehaiRemoved, strBafuhai ?? '', strJifuhai ?? '')[0];
 		let shantenPoint = 1000 * (10 - shanten);
 		let machiPoint = 0;
 		let elementMaxPoint = 0;
@@ -121,12 +119,33 @@ export const shouldRichi = (
 	nokori: number,
 	strTsumo: string,
 	dahai: string,
-	strBafuhai?: string,
-	strJifuhai?: string,
-	strDorahyouji?: string,
+	strBafuhai: string,
+	strJifuhai: string,
+	strDorahyouji: string,
 ): boolean => {
 	if (!canRichi(strTehai13, shanten, isRichi, nokori)) {
 		return false;
+	}
+	//親ならリーチする
+	if (strJifuhai === '1z') {
+		return true;
+	}
+	//待ちが悪い場合は様子を見る
+	const tehaiNew = removeHai(addHai(strTehai13, strTsumo), dahai);
+	const arMachi = stringToArrayWithFuro(getMachi(tehaiNew))[0];
+	if (arMachi.length < 2) {
+		return false;
+	}
+	//役があるならヤミテンでもいいのでは
+	const arDorahyouji = stringToArrayWithFuro(strDorahyouji)[0];
+	const arDora: string[] = arDorahyouji.map(d => getDoraFromDorahyouji(d));
+	const strDora = arDora.join('');
+	const isTsumo = true;
+	for (const machi of arMachi) {
+		const score = getScore(tehaiNew, machi, strBafuhai, strJifuhai, strDora, isTsumo)[0];
+		if (score > 0) {
+			return false;
+		}
 	}
 	return true;
 };
@@ -141,4 +160,16 @@ const canRichi = (
 		return true;
 	}
 	return false;
+};
+
+const addHai = (tehai: string, hai: string): string => {
+	const [arTehaiBaseNormal, hai_furo, hai_ankan] = stringToArrayWithFuro(tehai);
+	const arTehaiNewNormal = arTehaiBaseNormal.concat(hai);
+	arTehaiNewNormal.sort(compareFn);
+	const strTehaiNew = arTehaiNewNormal.join('') + hai_furo.map(h => `<${h}>`).join('') + hai_ankan.map(h => `(${h})`).join('');
+	return strTehaiNew;
+};
+
+const removeHai = (tehai: string, hai: string): string => {
+	return tehai.replace(new RegExp(hai), '');
 };
