@@ -186,8 +186,10 @@ export const res_s_sutehai_call = (event: NostrEvent, command: string, pai: stri
 			else {
 				const content = 'You cannot tsumo.';
 				const tags = getTagsReply(event);
-				return [[content, tags]];//fixme
+				res.push([content, tags]);
 			}
+			sutehai = tsumo;
+			break;
 		case 'richi':
 			arRichiJunme[i] = arKawa[i].length;
 			const content = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY say nostr:${nip19.npubEncode(players[i])} richi`;
@@ -233,7 +235,7 @@ const setSutehai = (sute: string, nPlayer: number) => {
 		else
 			arFuritenCheckTurn[i].push(sute);
 	}
-}
+};
 
 const sendNextTurn = (event: NostrEvent): [string, string[][]][] => {
 	if (arYama[nYamaIndex] === undefined) {
@@ -265,6 +267,7 @@ const canTsumo = (nPlayer: number, atariHai: string): boolean => {
 };
 
 export const res_s_naku_call = (event: NostrEvent, command: string, pai: string): [string, string[][]][] | null => {
+	const res: [string, string[][]][] = [];
 	const i = players.indexOf(event.pubkey);
 	switch (command) {
 		case 'ron':
@@ -278,13 +281,15 @@ export const res_s_naku_call = (event: NostrEvent, command: string, pai: string)
 			else {
 				const content = 'You cannot ron.';
 				const tags = getTagsReply(event);
-				return [[content, tags]];
+				res.push([content, tags]);
 			}
+			break;
 		case 'no':
-			return sendNextTurn(event);
+			break;
 		default:
 			throw new TypeError(`command ${command} is not supported`);
 	}
+	return [...res, ...sendNextTurn(event)];
 };
 
 const canRon = (nPlayer: number, atariHai: string): boolean => {
