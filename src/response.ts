@@ -110,8 +110,9 @@ const res_s_gamestart = (event: NostrEvent): [string, string[][]][] | null => {
 };
 
 const res_s_join = (event: NostrEvent): [string, string[][]][] | null => {
+	let count: number;
 	try {
-		res_s_join_call(event.pubkey);
+		count = res_s_join_call(event.pubkey);
 	} catch (error) {
 		let mes = 'unknown error';
 		if (error instanceof Error) {
@@ -119,7 +120,10 @@ const res_s_join = (event: NostrEvent): [string, string[][]][] | null => {
 		}
 		return [[mes, getTagsReply(event)]];
 	}
-	return mahjongGameStart(event);
+	if (count === 4) {
+		return mahjongGameStart(event);
+	}
+	return null;
 };
 
 const res_s_reset = (event: NostrEvent): [string, string[][]][] | null => {

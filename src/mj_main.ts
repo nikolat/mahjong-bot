@@ -11,7 +11,7 @@ export const res_s_gamestart_call = (pubkey: string): void => {
 	players.push(pubkey);
 };
 
-export const res_s_join_call = (pubkey: string): void => {
+export const res_s_join_call = (pubkey: string): number => {
 	if (players.includes(pubkey)) {
 		throw Error('You have already joined.');
 	}
@@ -19,6 +19,7 @@ export const res_s_join_call = (pubkey: string): void => {
 		throw Error('Sorry, we are full.');
 	}
 	players.push(pubkey);
+	return players.length;
 };
 
 export const res_s_reset_call = (): void => {
