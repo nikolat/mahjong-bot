@@ -2,7 +2,7 @@ import { type NostrEvent, nip19 } from 'nostr-tools';
 import { getShanten } from './mjlib/mj_shanten';
 import { naniwokiru, shouldRichi } from './mjlib/mj_ai';
 import { getScore } from './mjlib/mj_score';
-import { compareFn, getDoraFromDorahyouji, paikind, stringToArrayWithFuro } from './mjlib/mj_common';
+import { addHai, compareFn, getDoraFromDorahyouji, paikind, removeHai, stringToArrayWithFuro } from './mjlib/mj_common';
 import { getMachi } from './mjlib/mj_machi';
 import { convertEmoji, getTagsAirrep, getTagsEmoji, getTagsReply } from './utils';
 
@@ -136,9 +136,46 @@ const startKyoku = (event: NostrEvent): [string, string[][]][] => {
 	return res;
 };
 
+//東家を先頭にしてリーチ済の他家の現物を返す
+const getGenbutsu = (p: number): string[] => {
+	const r: string[] = [];
+	let findOya = false;
+	let i = 0;
+	while (r.length < 4) {
+		if (i === oyaIndex)
+			findOya = true;
+		if (findOya) {
+			if (i !== p && arFuritenCheckRichi[i].length > 0)
+				r.push(Array.from(new Set<string>(stringToArrayWithFuro(arKawa[i].join('') + arFuritenCheckRichi[i].join(''))[0])).sort(compareFn).join(''));
+			else
+				r.push('');
+		}
+		i = (i + 1) % 4;
+	}
+	return r;
+};
+
+//現在見えている牌
+const getVisiblePai = (p: number): string => {
+	return visiblePai + stringToArrayWithFuro(tehai[p].join(''))[0];
+};
+
 const getScoreView = (i: number, atarihai: string, isTsumo: boolean) => {
 	const richi: number = arRichiJunme[i] === 0 ? 2 : arRichiJunme[i] > 0 ? 1 : 0;
-	const r = getScore(tehai[i].join(''), atarihai, ['1z', '2z'][bafu], getJifuHai(i), getDoraFromDorahyouji(dorahyouji), isTsumo, richi);
+	const r = getScore(
+		tehai[i].join(''),
+		atarihai,
+		['1z', '2z'][bafu],
+		getJifuHai(i),
+		getDoraFromDorahyouji(dorahyouji),
+		isTsumo,
+		richi,
+		arIppatsuChance[i],
+		false,
+		false,
+		arYama.length === nYamaIndex,
+		arChihouChance[i],
+	);
 	let content = '';
 	if (r[2].size > 0) {
 		for (const [k, v] of r[2]) {
@@ -208,9 +245,8 @@ export const res_s_sutehai_call = (event: NostrEvent, command: string, pai: stri
 	}
 	isRinshanChance = false;
 	setSutehai(sutehai, i);
-	tehai[i].push(tsumo);
-	tehai[i].splice(tehai[i].indexOf(pai), 1);
-	tehai[i].sort(compareFn);//fixme
+	tehai[i] = stringToArrayWithFuro(addHai(tehai[i].join(''), tsumo))[0];
+	tehai[i] = stringToArrayWithFuro(removeHai(tehai.join(''), sutehai))[0];
 	const naku: [string, string[][]][] = [];
 	for (const index of [0, 1, 2, 3].filter(idx => idx !== i)) {
 		if (canRon(index, pai)) {
@@ -244,6 +280,7 @@ const sendNextTurn = (event: NostrEvent): [string, string[][]][] => {
 		const tags = getTagsAirrep(event);
 		return [[content, tags]];
 	}
+	setKyotaku(currentPlayer);
 	tsumo = arYama[nYamaIndex++];
 	const i2 = (currentPlayer + 1) % 4;
 	const content = `NOTIFY tsumo nostr:${nip19.npubEncode(players[i2])} ${arYama.length - nYamaIndex} ${tsumo}\n${tehai[i2].map(pi => `:${convertEmoji(pi)}:`).join('')} :${convertEmoji(tsumo)}:\nGET sutehai?`;
@@ -261,10 +298,38 @@ const canTsumo = (nPlayer: number, atariHai: string): boolean => {
 	if (shanten !== -1)
 		return false;
 	//役があるかどうか検証する
-	const score = getScore(tehai[nPlayer].join(''), atariHai, ['1z', '2z'][bafu], getJifuHai(nPlayer), getDoraFromDorahyouji(dorahyouji), true)[0];//fix me
+	const richi: number = arRichiJunme[nPlayer] === 0 ? 2 : arRichiJunme[nPlayer] > 0 ? 1 : 0;
+	const score = getScore(
+		tehai[nPlayer].join(''),
+		atariHai,
+		['1z', '2z'][bafu],
+		getJifuHai(nPlayer),
+		getDoraFromDorahyouji(dorahyouji),
+		true,
+		richi,
+		arIppatsuChance[nPlayer],
+		false,
+		false,
+		arYama.length === nYamaIndex,
+		arChihouChance[nPlayer],
+	)[0];
 	if (score <= 0)
 		return false;
 	return true;
+};
+
+const setKyotaku = (nPlayer: number) => {
+	if (arRichiJunme[nPlayer] === arKawa[nPlayer].length - 1) {
+		kyotaku++;
+		arScore[nPlayer] -= 1000;
+		arIppatsuChance[nPlayer] = true;
+		if (arChihouChance[nPlayer])
+			arWRichi[nPlayer] = true;
+	}
+	else {
+		arIppatsuChance[nPlayer] = false;
+	}
+	arChihouChance[nPlayer] = false;
 };
 
 export const res_s_naku_call = (event: NostrEvent, command: string, pai: string): [string, string[][]][] | null => {
@@ -336,7 +401,17 @@ export const res_c_sutehai_call = (event: NostrEvent, tsumo: string): [string, s
 			sutehai = tsumo;
 		}
 		else {
-			sutehai = naniwokiru(tehai[i].join(''), tsumo, undefined, ['1z', '2z'][bafu], getJifuHai(i), dorahyouji);
+			sutehai = naniwokiru(
+				tehai[i].join(''),
+				tsumo,
+				arKawa[i].join(''),
+				['1z', '2z'][bafu],
+				getJifuHai(i),
+				dorahyouji,
+				arRichiJunme.map(e => e >= 0),
+				[0, 1, 2, 3].map(p => getGenbutsu(p).join('')),
+				getVisiblePai(i),
+			);
 		}
 	}
 	if (shanten === -1) {
