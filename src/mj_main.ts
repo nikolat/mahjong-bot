@@ -245,11 +245,8 @@ export const res_s_sutehai_call = (event: NostrEvent, command: string, pai: stri
 	}
 	isRinshanChance = false;
 	setSutehai(sutehai, i);
-	tehai[i].push(tsumo);
-	tehai[i].splice(tehai[i].indexOf(pai), 1);
-	tehai[i].sort(compareFn);//fixme
-//	tehai[i] = stringToArrayWithFuro(addHai(tehai[i].join(''), tsumo))[0];
-//	tehai[i] = stringToArrayWithFuro(removeHai(tehai.join(''), sutehai))[0];
+	tehai[i] = stringToArrayWithFuro(addHai(tehai[i].join(''), tsumo))[0];
+	tehai[i] = stringToArrayWithFuro(removeHai(tehai[i].join(''), sutehai))[0];
 	const naku: [string, string[][]][] = [];
 	for (const index of [0, 1, 2, 3].filter(idx => idx !== i)) {
 		if (canRon(index, pai)) {
