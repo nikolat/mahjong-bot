@@ -157,7 +157,7 @@ const getGenbutsu = (p: number): string[] => {
 
 //現在見えている牌
 const getVisiblePai = (p: number): string => {
-	return visiblePai + stringToArrayWithFuro(tehai[p].join(''))[0];
+	return visiblePai + stringToArrayWithFuro(tehai[p].join(''))[0].join('');
 };
 
 const getScoreView = (i: number, atarihai: string, isTsumo: boolean) => {
