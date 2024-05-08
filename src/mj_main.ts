@@ -1,6 +1,6 @@
 import { type NostrEvent, nip19 } from 'nostr-tools';
 import { getShanten } from './mjlib/mj_shanten';
-import { naniwokiru, shouldRichi } from './mjlib/mj_core';
+import { naniwokiru, shouldRichi } from './mjlib/mj_ai';
 import { getScore } from './mjlib/mj_score';
 import { compareFn, getDoraFromDorahyouji, paikind, stringToArrayWithFuro } from './mjlib/mj_common';
 import { getMachi } from './mjlib/mj_machi';
