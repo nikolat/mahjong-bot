@@ -1,6 +1,6 @@
 import { type NostrEvent, nip19 } from 'nostr-tools';
 import { getShanten } from './mjlib/mj_shanten';
-import { naniwokiru, shouldRichi } from './mjlib/mj_ai';
+import { naniwokiru, shouldPon, shouldRichi } from './mjlib/mj_ai';
 import { getScore } from './mjlib/mj_score';
 import { addHai, compareFn, getDoraFromDorahyouji, paikind, removeHai, stringToArrayWithFuro } from './mjlib/mj_common';
 import { getMachi } from './mjlib/mj_machi';
@@ -453,7 +453,7 @@ const canPon = (nPlayer: number, suteHai: string): boolean => {
 	const ak: number[] = [countKantsu(0), countKantsu(1), countKantsu(2), countKantsu(3)];
 	if (ak[0] + ak[1] + ak[2] + ak[3] == 4 && ak[0] != 4 && ak[1] != 4 && ak[2] != 4 && ak[3] != 4)
 		return false;
-	if (stringToArrayWithFuro(arTehai[nPlayer])[0].filter(h => h === suteHai).length > 2)
+	if (stringToArrayWithFuro(arTehai[nPlayer])[0].filter(h => h === suteHai).length >= 2)
 		return true;
 	return false;
 };
@@ -526,9 +526,15 @@ export const res_c_sutehai_after_furo_call = (event: NostrEvent): [string, strin
 };
 
 export const res_c_naku_call = (event: NostrEvent, command: string[]): [string, string[][]][] => {
+	const i = players.indexOf(event.tags.filter(tag => tag.length >= 2 && tag[0] === 'p').map(tag => tag[1])[0]);
 	let res = 'no';
 	if (command.includes('ron')) {
 		res = 'ron';
+	}
+	else if (command.includes('pon')) {
+		if (shouldPon(arTehai[i], sutehai, ['1z', '2z'][bafu], getJifuHai(i), arRichiJunme)) {
+			res = 'pon';
+		}
 	}
 	const content = `nostr:${nip19.npubEncode(event.pubkey)} naku? ${res}`;
 	const tags = getTagsReply(event);

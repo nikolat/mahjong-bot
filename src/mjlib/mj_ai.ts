@@ -30,13 +30,13 @@ export const naniwokiru = (
 	const arKoritsuhai = removeKoritsuHai(arTehai14Normal)[1];
 	const arSutehaiKouho = new Set(arTehai14Normal)
 	//ドラ
-	const arDorahyouji = stringToArrayWithFuro(strDorahyouji ?? '')[0];
+	const arDorahyouji = stringToArrayWithFuro(strDorahyouji)[0];
 	const arDora: string[] = arDorahyouji.map(d => getDoraFromDorahyouji(d));
 	let arDahai: string[] = [];
 	let point = -1;
 	for (const sutehai of arSutehaiKouho) {
 		const strTehaiRemoved = removeHai(strTehai14, sutehai);
-		const shanten = getShantenYaku(strTehaiRemoved, strBafuhai ?? '', strJifuhai ?? '')[0];
+		const shanten = getShantenYaku(strTehaiRemoved, strBafuhai, strJifuhai)[0];
 		let shantenPoint = 1000 * (10 - shanten);
 		let machiPoint = 0;
 		let elementMaxPoint = 0;
@@ -198,6 +198,26 @@ const canRichi = (
 	nokori: number,
 ): boolean => {
 	if (!tehai.includes('<') && shanten === 0 && !isRichi && nokori >= 4) {
+		return true;
+	}
+	return false;
+};
+
+export const shouldPon = (
+	tehai: string,
+	sutehai: string,
+	bafuHai: string,
+	jifuHai: string,
+	arRichiJunme: number[]
+): boolean => {
+	//誰かがリーチしていたら鳴かない
+	if (arRichiJunme.some(e => e >= 0))
+		return false;
+	const h = sutehai;
+	const tehaiNew = removeHai(tehai, h.repeat(2)) + `<${h.repeat(3)}>`;
+	const shantenBefore = getShantenYaku(tehai, bafuHai, jifuHai)[0];
+	const shantenAfter = getShantenYaku(tehaiNew, bafuHai, jifuHai)[0];
+	if (shantenAfter < shantenBefore && shantenAfter === 0) {//それでテンパイするなら鳴く
 		return true;
 	}
 	return false;
