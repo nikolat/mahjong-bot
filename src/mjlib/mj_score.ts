@@ -1,4 +1,5 @@
 import {
+	addHai,
 	compareFn,
 	removeElementByName,
 	stringArrayToNumArray,
@@ -33,8 +34,9 @@ export const getScore = (
 	const hai_normal_all: string[] = structuredClone(hai_normal);
 	hai_normal_all.push(agari_hai);
 	hai_normal_all.sort(compareFn);
-	const hai_plain: string[] = stringToArrayPlain(tehai + agari_hai).sort(compareFn);
-	const [shanten_normal, composition] = getShantenNormal(tehai + agari_hai);
+	const hai_plain: string[] = stringToArrayPlain(addHai(tehai, agari_hai));
+	hai_plain.sort(compareFn);
+	const [shanten_normal, composition] = getShantenNormal(addHai(tehai, agari_hai));
 	let is_normal = true;
 	if (shanten_normal !== -1) {
 		composition.length = 0;
