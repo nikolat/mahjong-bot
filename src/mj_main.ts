@@ -140,8 +140,8 @@ const startKyoku = (event: NostrEvent): [string, string[][]][] => {
 const tehaiToEmoji = (tehai: string): string => {
 	const [hai_normal, hai_furo, hai_ankan] = stringToArrayWithFuro(tehai);
 	return hai_normal.map(pi => `:${convertEmoji(pi)}:`).join('')
-		+ ' ' + hai_furo.map(pi => '<' + stringToArrayWithFuro(pi)[0].map(p => `:${convertEmoji(p)}:`) + '>').join('')
-		+ ' ' + hai_ankan.map(pi => '(' + stringToArrayWithFuro(pi)[0].map(p => `:${convertEmoji(p)}:`) + ')').join('')
+		+ ' ' + hai_furo.map(pi => '<' + stringToArrayWithFuro(pi)[0].map(p => `:${convertEmoji(p)}:`).join() + '>').join('')
+		+ ' ' + hai_ankan.map(pi => '(' + stringToArrayWithFuro(pi)[0].map(p => `:${convertEmoji(p)}:`).join() + ')').join('')
 };
 
 //東家を先頭にしてリーチ済の他家の現物を返す
@@ -401,6 +401,7 @@ export const res_s_naku_call = (event: NostrEvent, command: string, pai: string)
 				const content3 = `${tehaiToEmoji(arTehai[i])}\nGET sutehai?`;
 				const tags3 = [...getTagsAirrep(event), ['p', players[i], ''], ...getTagsEmoji(arTehai[i])];
 				res.push([content3, tags3]);
+				return res;
 			}
 			else {
 				const content = 'You cannot pon.';
