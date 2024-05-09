@@ -1,6 +1,7 @@
 import type { Readable } from 'node:stream';
 import { Buffer } from 'node:buffer';
 import { type EventTemplate, type NostrEvent, finalizeEvent, getPublicKey } from 'nostr-tools';
+import { stringToArrayPlain } from './mjlib/mj_common';
 
 export const enum Mode {
 	Server,
@@ -68,7 +69,8 @@ export const getTagsReply = (event: NostrEvent): string[][] => {
 	return tagsReply;
 };
 
-export const getTagsEmoji = (pi: string[]): string[][] => {
+export const getTagsEmoji = (tehai: string): string[][] => {
+	const pi = stringToArrayPlain(tehai);
 	return Array.from(new Set(pi)).map(pi => ['emoji', convertEmoji(pi), getEmojiUrl(pi)]);
 };
 

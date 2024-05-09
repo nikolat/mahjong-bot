@@ -74,7 +74,11 @@ export const addHai = (tehai: string, hai: string): string => {
 };
 
 export const removeHai = (tehai: string, hai: string): string => {
-	return tehai.replace(new RegExp(hai), '');
+	let r = tehai;
+	for (const p of stringToArrayWithFuro(hai)[0]) {
+		r = r.replace(new RegExp(hai), '');
+	}
+	return r
 };
 
 //指定した要素を削除

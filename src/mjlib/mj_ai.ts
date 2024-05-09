@@ -1,4 +1,4 @@
-import { addHai, compareFn, getDoraFromDorahyouji, removeHai, stringToArrayWithFuro } from "./mj_common";
+import { addHai, getDoraFromDorahyouji, removeHai, stringToArrayWithFuro } from "./mj_common";
 import { getMachi } from "./mj_machi";
 import { getScore } from "./mj_score";
 import { getShanten, getShantenYaku, removeKoritsuHai } from "./mj_shanten";
