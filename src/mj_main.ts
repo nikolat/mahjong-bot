@@ -74,7 +74,7 @@ let dorahyouji: string;
 let visiblePai: string;
 let nYamaIndex = 0;
 let arTehai: string[];
-let tsumo: string;
+let savedTsumo: string;
 let sutehai: string;
 let currentPlayer: number;
 let reservedNaku: Map<string, string>;
@@ -107,7 +107,7 @@ const startKyoku = (event: NostrEvent): [string, string[][]][] => {
 	reservedNaku = new Map<string, string>();
 	reservedTenpai = new Map<string, string>();
 	dResponseNeed = new Map<string, string>();
-	tsumo = arYama[nYamaIndex++];
+	savedTsumo = arYama[nYamaIndex++];
 	currentPlayer = oyaIndex;
 	let s: string = '';
 	//kyokustart通知
@@ -131,8 +131,8 @@ const startKyoku = (event: NostrEvent): [string, string[][]][] => {
 	const tags_dora = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
 	res.push([content_dora, tags_dora]);
 	//ツモ通知 捨て牌要求
-	const content_sutehai = `NOTIFY tsumo nostr:${nip19.npubEncode(players[oyaIndex])} ${arYama.length - nYamaIndex} ${tsumo}\n${tehaiToEmoji(arTehai[oyaIndex])} :${convertEmoji(tsumo)}:\nGET sutehai?`;
-	const tags_sutehai = [...getTagsAirrep(event), ['p', players[oyaIndex], ''], ...getTagsEmoji(addHai(arTehai[oyaIndex], tsumo))];
+	const content_sutehai = `NOTIFY tsumo nostr:${nip19.npubEncode(players[oyaIndex])} ${arYama.length - nYamaIndex} ${savedTsumo}\n${tehaiToEmoji(arTehai[oyaIndex])} :${convertEmoji(savedTsumo)}:\nGET sutehai?`;
+	const tags_sutehai = [...getTagsAirrep(event), ['p', players[oyaIndex], ''], ...getTagsEmoji(addHai(arTehai[oyaIndex], savedTsumo))];
 	res.push([content_sutehai, tags_sutehai]);
 	return res;
 };
@@ -140,8 +140,8 @@ const startKyoku = (event: NostrEvent): [string, string[][]][] => {
 const tehaiToEmoji = (tehai: string): string => {
 	const [hai_normal, hai_furo, hai_ankan] = stringToArrayWithFuro(tehai);
 	return hai_normal.map(pi => `:${convertEmoji(pi)}:`).join('')
-		+ ' ' + hai_furo.map(pi => '<' + stringToArrayWithFuro(pi)[0].map(p => `:${convertEmoji(p)}:`).join() + '>').join('')
-		+ ' ' + hai_ankan.map(pi => '(' + stringToArrayWithFuro(pi)[0].map(p => `:${convertEmoji(p)}:`).join() + ')').join('')
+		+ ' ' + hai_furo.map(pi => '<' + stringToArrayWithFuro(pi)[0].map(p => `:${convertEmoji(p)}:`).join('') + '>').join('')
+		+ ' ' + hai_ankan.map(pi => '(' + stringToArrayWithFuro(pi)[0].map(p => `:${convertEmoji(p)}:`).join('') + ')').join('')
 };
 
 //東家を先頭にしてリーチ済の他家の現物を返す
@@ -222,10 +222,10 @@ export const res_s_sutehai_call = (event: NostrEvent, command: string, pai: stri
 	currentPlayer = i;
 	switch (command) {
 		case 'tsumo':
-			if (canTsumo(i, tsumo)) {// 和了
-				const content = getScoreView(i, tsumo, true) + '\n'
-					+ `${tehaiToEmoji(arTehai[i])} :${convertEmoji(tsumo)}:`;
-				const tags = [...getTagsAirrep(event), ...getTagsEmoji(addHai(arTehai[i], tsumo))];
+			if (canTsumo(i, savedTsumo)) {// 和了
+				const content = getScoreView(i, savedTsumo, true) + '\n'
+					+ `${tehaiToEmoji(arTehai[i])} :${convertEmoji(savedTsumo)}:`;
+				const tags = [...getTagsAirrep(event), ...getTagsEmoji(addHai(arTehai[i], savedTsumo))];
 				reset_game();
 				return [[content, tags]];
 			}
@@ -234,7 +234,7 @@ export const res_s_sutehai_call = (event: NostrEvent, command: string, pai: stri
 				const tags = getTagsReply(event);
 				res.push([content, tags]);
 			}
-			sutehai = tsumo;
+			sutehai = savedTsumo;
 			break;
 		case 'richi':
 			arRichiJunme[i] = arKawa[i].length;
@@ -253,7 +253,9 @@ export const res_s_sutehai_call = (event: NostrEvent, command: string, pai: stri
 	}
 	isRinshanChance = false;
 	setSutehai(sutehai, i);
-	arTehai[i] = removeHai(addHai(arTehai[i], tsumo), sutehai);
+	if (savedTsumo)
+		arTehai[i] = addHai(arTehai[i], savedTsumo);
+	arTehai[i] = removeHai(arTehai[i], sutehai);
 	const naku: [string, string[][]][] = [];
 	for (const index of [0, 1, 2, 3].filter(idx => idx !== i)) {
 		const command: string[] = [];
@@ -295,10 +297,10 @@ const sendNextTurn = (event: NostrEvent): [string, string[][]][] => {
 		return [[content, tags]];
 	}
 	setKyotaku(currentPlayer);
-	tsumo = arYama[nYamaIndex++];
+	savedTsumo = arYama[nYamaIndex++];
 	const i2 = (currentPlayer + 1) % 4;
-	const content = `NOTIFY tsumo nostr:${nip19.npubEncode(players[i2])} ${arYama.length - nYamaIndex} ${tsumo}\n${tehaiToEmoji(arTehai[i2])} :${convertEmoji(tsumo)}:\nGET sutehai?`;
-	const tags = [...getTagsAirrep(event), ['p', players[i2], ''], ...getTagsEmoji(addHai(arTehai[i2], tsumo))];
+	const content = `NOTIFY tsumo nostr:${nip19.npubEncode(players[i2])} ${arYama.length - nYamaIndex} ${savedTsumo}\n${tehaiToEmoji(arTehai[i2])} :${convertEmoji(savedTsumo)}:\nGET sutehai?`;
+	const tags = [...getTagsAirrep(event), ['p', players[i2], ''], ...getTagsEmoji(addHai(arTehai[i2], savedTsumo))];
 	return [[content, tags]];
 };
 
@@ -389,6 +391,7 @@ export const res_s_naku_call = (event: NostrEvent, command: string, pai: string)
 			if (canPon(i, sutehai)) {
 				setKyotaku(currentPlayer);
 				setFuro(i, currentPlayer, sutehai, sutehai + sutehai);
+				savedTsumo = '';
 				//発声通知
 				const content = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY say nostr:${nip19.npubEncode(players[i])} pon`;
 				const tags = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
@@ -512,7 +515,7 @@ export const res_c_sutehai_after_furo_call = (event: NostrEvent): [string, strin
 	const action = 'sutehai';
 	const select = naniwokiru(
 		arTehai[i],
-		tsumo,
+		'',
 		arKawa[i].join(''),
 		['1z', '2z'][bafu],
 		getJifuHai(i),
@@ -561,7 +564,7 @@ const reset_game = () => {
 	visiblePai = '';
 	nYamaIndex = 0;
 	sutehai = '';
-	tsumo = '';
+	savedTsumo = '';
 };
 
 const shuffle = (array: string[]) => { 

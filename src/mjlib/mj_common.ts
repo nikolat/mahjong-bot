@@ -52,7 +52,7 @@ export const stringToArrayWithFuro = (tehai: string): [string[], string[], strin
 		ankan.push(match[1]);
 	}
 	const nm = normal.matchAll(/[1-9][mspz]/g);
-	const r: string[] = []
+	const r: string[] = [];
 	for (const m of nm) {
 		r.push(m[0]);
 	}
