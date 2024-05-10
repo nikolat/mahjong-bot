@@ -506,7 +506,7 @@ const execNaku = (event: NostrEvent, pubkey: string, actions: string[]): [string
 				return res;
 			}
 			else {
-				const content = 'You cannot pon.';
+				const content = 'You cannot chi.';
 				const tags = getTagsReply(event);
 				res.push([content, tags]);
 			}
