@@ -61,8 +61,8 @@ const getResmap = (mode: Mode): [RegExp, (event: NostrEvent, mode: Mode, regstr:
 		[/reset$/, res_s_reset],
 		[/sutehai\?\s(sutehai|ankan|kakan|richi|tsumo)\s?([1-9][mpsz])?/, res_s_sutehai],
 		[/^(sutehai\?)?([1-9][mpsz])/, res_s_sutehai],
-		[/naku\?\s(no|ron|kan|pon|chi)\s?([1-9][mpsz])?/, res_s_naku],
-		[/^(no|ron|kan|pon|chi)\s?([1-9][mpsz])?/, res_s_naku],
+		[/naku\?\s(no|ron|kan|pon|chi)\s?([1-9][mpsz])?\s?([1-9][mpsz])?/, res_s_naku],
+		[/^(no|ron|kan|pon|chi)\s?([1-9][mpsz])?\s?([1-9][mpsz])?/, res_s_naku],
 	];
 	const resmapClient: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => [string, string[][]][] | null][] = [
 		[/ping$/, res_ping],
@@ -148,8 +148,9 @@ const res_s_naku = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, str
 		throw new Error();
 	}
 	const command = match[1];
-	const pai = match[2];
-	return res_s_naku_call(event, command, pai);
+	const pai1 = match[2];
+	const pai2 = match[3];
+	return res_s_naku_call(event, command, pai1, pai2);
 };
 
 const res_c_join = (event: NostrEvent): [string, string[][]][] => {
