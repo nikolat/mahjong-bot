@@ -137,9 +137,9 @@ const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, 
 	if (match === null) {
 		throw new Error();
 	}
-	const command = match[1] ?? 'sutehai';
+	const action = match[1] ?? 'sutehai';
 	const pai = match[2];
-	return res_s_sutehai_call(event, command, pai);
+	return res_s_sutehai_call(event, action, pai);
 };
 
 const res_s_naku = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, string[][]][] | null => {
@@ -147,10 +147,10 @@ const res_s_naku = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, str
 	if (match === null) {
 		throw new Error();
 	}
-	const command = match[1];
+	const action = match[1];
 	const pai1 = match[2];
 	const pai2 = match[3];
-	return res_s_naku_call(event, command, pai1, pai2);
+	return res_s_naku_call(event, action, pai1, pai2);
 };
 
 const res_c_join = (event: NostrEvent): [string, string[][]][] => {

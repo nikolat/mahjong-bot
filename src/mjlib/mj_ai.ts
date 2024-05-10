@@ -1,4 +1,4 @@
-import { addHai, getDoraFromDorahyouji, removeHai, stringToArrayWithFuro } from "./mj_common";
+import { addHai, compareFn, getDoraFromDorahyouji, removeHai, stringToArrayWithFuro } from "./mj_common";
 import { getMachi } from "./mj_machi";
 import { getScore } from "./mj_score";
 import { getShanten, getShantenYaku, removeKoritsuHai } from "./mj_shanten";
@@ -221,4 +221,55 @@ export const shouldPon = (
 		return true;
 	}
 	return false;
+};
+
+export const getChiMaterialBest = (
+	tehai: string,
+	sutehai: string,
+	bafuHai: string,
+	jifuHai: string,
+	arRichiJunme: number[]
+): string => {
+	//誰かがリーチしていたら鳴かない
+	if (arRichiJunme.some(e => e >= 0))
+		return '';
+	const arChi: string[] = getChiMaterial(tehai, sutehai);
+	const shantenBefore = getShantenYaku(tehai, bafuHai, jifuHai)[0];
+	const r: string[] = [];
+	for (const c of arChi) {
+		const furoArray = [sutehai, c.slice(0, 2), c.slice(2, 4)];
+		furoArray.sort(compareFn);
+		const tehaiNew = removeHai(tehai, c) + `<${furoArray.join('')}>`;
+		const shantenAfter = getShantenYaku(tehaiNew, bafuHai, jifuHai)[0];
+		if (shantenAfter < shantenBefore && shantenAfter === 0) {//それでテンパイするなら鳴く
+			r.push(c);
+		}
+	}
+	if (r.length === 0)
+		return '';
+	return any(r);
+};
+
+export const getChiMaterial = (
+	tehai: string,
+	sutehai: string,
+): string[] => {
+	const n = Number.parseInt(sutehai.slice(0, 1));
+	const color = sutehai.slice(1, 2);
+	if (color === 'z')
+		return [];
+	const arTehai = stringToArrayWithFuro(tehai)[0]
+	const a: number[] = [];
+	for (const hai of arTehai) {
+		if (hai.slice(1, 2) === color)
+			a.push(Number.parseInt(hai.slice(0, 1)))
+	}
+	const arRet: string[] = [];
+	for (const [n1, n2] of [[n - 2, n - 1], [n - 1, n + 1], [n + 1, n + 2]]) {
+		if (a.includes(n1) && a.includes(n2))
+			arRet.push(`${n1}${color}${n2}${color}`);
+	}
+	return arRet;
+	//喰い替え禁止ルールでは手配が禁止牌のみの場合は除外すべきだが、レアケースのため未実装
+	//例: 1m2m3m4m<1p1p1p><1s1s1s><9s9s9s>で1mをチーした場合などは詰む
 };

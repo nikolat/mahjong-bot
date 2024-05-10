@@ -1,6 +1,6 @@
 import { type NostrEvent, nip19 } from 'nostr-tools';
 import { getShanten } from './mjlib/mj_shanten';
-import { naniwokiru, shouldPon, shouldRichi } from './mjlib/mj_ai';
+import { getChiMaterial, getChiMaterialBest, naniwokiru, shouldPon, shouldRichi } from './mjlib/mj_ai';
 import { getScore } from './mjlib/mj_score';
 import { addHai, compareFn, getDoraFromDorahyouji, paikind, removeHai, stringToArrayWithFuro } from './mjlib/mj_common';
 import { getMachi } from './mjlib/mj_machi';
@@ -77,7 +77,7 @@ let arTehai: string[];
 let savedTsumo: string;
 let sutehai: string;
 let currentPlayer: number;
-let reservedNaku: Map<string, string[]>;
+let reservedNaku = new Map<string, string[]>();
 let reservedTenpai: Map<string, string>;
 let dResponseNeed: Map<string, string>;
 const arBafu = ['東', '南'];
@@ -257,7 +257,7 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
 		case 'ankan':
 		case 'kakan':
 		default:
-			throw new TypeError(`command ${action} is not supported`);
+			throw new TypeError(`action ${action} is not supported`);
 	}
 	isRinshanChance = false;
 	setSutehai(sutehai, i);
@@ -266,16 +266,19 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
 	arTehai[i] = removeHai(arTehai[i], sutehai);
 	const naku: [string, string[][]][] = [];
 	for (const index of [0, 1, 2, 3].filter(idx => idx !== i)) {
-		const command: string[] = [];
+		const action: string[] = [];
 		if (canRon(index, pai)) {
-			command.push('ron');
+			action.push('ron');
 		}
 		if (canPon(index, pai)) {
-			command.push('pon');
+			action.push('pon');
 		}
-		if (command.length > 0) {
+		if ((i + 1) % 4 == index && canChi(index, pai)) {
+			action.push('chi');
+		}
+		if (action.length > 0) {
 			dResponseNeed.set(players[index], 'naku?');
-			const content = `nostr:${nip19.npubEncode(players[index])}\nGET naku? ${command.join(' ')}`;
+			const content = `nostr:${nip19.npubEncode(players[index])}\nGET naku? ${action.join(' ')}`;
 			const tags = [...getTagsAirrep(event), ['p', players[index], '']];
 			naku.push([content, tags]);
 		}
@@ -452,6 +455,7 @@ const execNaku = (event: NostrEvent, pubkey: string, actions: string[]): [string
 			break;
 		case 'pon':
 			if (canPon(i, sutehai)) {
+				const furoHai = sutehai.repeat(3);
 				setKyotaku(currentPlayer);
 				setFuro(i, currentPlayer, sutehai, sutehai + sutehai);
 				savedTsumo = '';
@@ -460,7 +464,38 @@ const execNaku = (event: NostrEvent, pubkey: string, actions: string[]): [string
 				const tags = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
 				res.push([content, tags]);
 				//晒した牌通知
-				const content2 = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY open nostr:${nip19.npubEncode(players[i])} ${sutehai.repeat(3)}`;
+				const content2 = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY open nostr:${nip19.npubEncode(players[i])} ${furoHai}`;
+				const tags2 = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+				res.push([content2, tags2]);
+				//捨て牌問い合わせ
+				dResponseNeed.set(players[i], 'sutehai?');
+				const content3 = `${tehaiToEmoji(arTehai[i])}\nGET sutehai?`;
+				const tags3 = [...getTagsAirrep(event), ['p', players[i], ''], ...getTagsEmoji(arTehai[i])];
+				res.push([content3, tags3]);
+				return res;
+			}
+			else {
+				const content = 'You cannot pon.';
+				const tags = getTagsReply(event);
+				res.push([content, tags]);
+			}
+			break;
+		case 'chi':
+			if (canChi(i, sutehai)) {
+				const hai1: string = actions[1];
+				const hai2: string = actions[2];
+				const furoArray = [sutehai, hai1, hai2];
+				furoArray.sort(compareFn);
+				const furoHai = furoArray.join('');
+				setKyotaku(currentPlayer);
+				setFuro(i, currentPlayer, sutehai, hai1 + hai2);
+				savedTsumo = '';
+				//発声通知
+				const content = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY say nostr:${nip19.npubEncode(players[i])} chi`;
+				const tags = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+				res.push([content, tags]);
+				//晒した牌通知
+				const content2 = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY open nostr:${nip19.npubEncode(players[i])} ${furoHai}`;
 				const tags2 = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
 				res.push([content2, tags2]);
 				//捨て牌問い合わせ
@@ -525,6 +560,17 @@ const canPon = (nPlayer: number, suteHai: string): boolean => {
 		return true;
 	return false;
 };
+
+const canChi = (nPlayer: number, suteHai: string): boolean => {
+	if (arYama.length - nYamaIndex === 0)
+		return false;
+	if (arRichiJunme[nPlayer] >= 0)
+		return false;
+	const a = getChiMaterial(arTehai[nPlayer], suteHai);
+	if (a.length > 0)
+		return true;
+	return false;
+}
 
 const countKantsu = (nPlayer: number) => {
 	const [normal, furo, ankan] = stringToArrayWithFuro(arTehai[nPlayer]);
@@ -593,15 +639,21 @@ export const res_c_sutehai_after_furo_call = (event: NostrEvent): [string, strin
 	return [[content, tags]];
 };
 
-export const res_c_naku_call = (event: NostrEvent, command: string[]): [string, string[][]][] => {
+export const res_c_naku_call = (event: NostrEvent, action: string[]): [string, string[][]][] => {
 	const i = players.indexOf(event.tags.filter(tag => tag.length >= 2 && tag[0] === 'p').map(tag => tag[1])[0]);
 	let res = 'no';
-	if (command.includes('ron')) {
+	if (action.includes('ron')) {
 		res = 'ron';
 	}
-	else if (command.includes('pon')) {
+	else if (action.includes('pon')) {
 		if (shouldPon(arTehai[i], sutehai, ['1z', '2z'][bafu], getJifuHai(i), arRichiJunme)) {
 			res = 'pon';
+		}
+	}
+	else if (action.includes('chi')) {
+		const s = getChiMaterialBest(arTehai[i], sutehai, ['1z', '2z'][bafu], getJifuHai(i), arRichiJunme);
+		if (s !== '') {
+			res = ['chi', s.slice(0, 2), s.slice(2, 4)].join(' ');
 		}
 	}
 	const content = `nostr:${nip19.npubEncode(event.pubkey)} naku? ${res}`;
