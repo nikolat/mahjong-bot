@@ -414,7 +414,7 @@ export const res_s_naku_call = (event: NostrEvent, action: string, pai1: string,
 		res.push([content, tags]);
 		return res;
 	}
-	for (const a of ['ron', 'pon', 'kan', 'chi']) {
+	for (const a of ['ron', 'pon', 'kan', 'chi', 'no']) {
 		for (const [k, v] of reservedNaku) {
 			if (v[0] === a) {
 				pubkey = k;
