@@ -92,7 +92,7 @@ export const getScore = (
 	if (is_normal && isDaisushi(mentsu)) {
 		ret_yakuman.set('大四喜', 2);
 	}
-	if (!is_normal && getShantenKokushimusou(tehai + agari_hai) === -1) {
+	if (!is_normal && getShantenKokushimusou(addHai(tehai, agari_hai)) === -1) {
 		if (hai_normal.includes(agari_hai)) {
 			ret_yakuman.set('国士無双', 2);
 		}
@@ -154,7 +154,7 @@ export const getScore = (
 	let count_peko = 0;
 	if (is_normal)
 		count_peko = countPeko(mentsu);
-	if (count_peko != 2 && getShantenChitoitsu(tehai + agari_hai) == -1) {
+	if (count_peko != 2 && getShantenChitoitsu(addHai(tehai, agari_hai)) == -1) {
 		ret_han.set('七対子', 2);
 	}
 	const is_honrou = isHonroutou(hai_plain);
