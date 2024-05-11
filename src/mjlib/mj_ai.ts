@@ -191,7 +191,7 @@ export const getKakanHaiBest = (
 	return '';
 };
 
-const getKakanHai = (tehai: string): string[] => {
+export const getKakanHai = (tehai: string): string[] => {
 	const arHai: string[] = stringToArrayWithFuro(tehai)[0]
 	const arRet: string[] = []
 	for (const h of arHai) {

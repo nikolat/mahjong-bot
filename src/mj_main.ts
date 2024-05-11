@@ -1,6 +1,6 @@
 import { type NostrEvent, nip19 } from 'nostr-tools';
 import { getShanten } from './mjlib/mj_shanten';
-import { canRichi, countKantsu, getAnkanHaiBest, getChiMaterial, getChiMaterialBest, getKakanHaiBest, naniwokiru, shouldDaiminkan, shouldPon, shouldRichi } from './mjlib/mj_ai';
+import { canRichi, countKantsu, getAnkanHaiBest, getChiMaterial, getChiMaterialBest, getKakanHai, getKakanHaiBest, naniwokiru, shouldDaiminkan, shouldPon, shouldRichi } from './mjlib/mj_ai';
 import { getScore } from './mjlib/mj_score';
 import { addHai, compareFn, getDoraFromDorahyouji, paikind, removeHai, stringToArrayWithFuro } from './mjlib/mj_common';
 import { getMachi } from './mjlib/mj_machi';
@@ -865,18 +865,6 @@ const canKakan = (nPlayer: number, tsumoHai: string, kakanHaiSelected?: string):
 	if (arKakanHai.length > 0)
 		return true;
 	return false;
-};
-
-const getKakanHai = (hai: string): string[] => {
-	const arHai: string[][] = stringToArrayWithFuro(hai);
-	const arHaiWithoutFuro: string[] = arHai[0];
-	const arMinko: string[] = arHai[1].filter(f => f.length === 6 && f.slice(0, 2) === f.slice(2, 4));
-	const arRet: string[] = [];
-	for (const m of arMinko) {
-		if (arHaiWithoutFuro.includes(m))
-			arRet.push(m);
-	}
-	return arRet;
 };
 
 export const res_c_sutehai_call = (event: NostrEvent): [string, string[][]][] => {
