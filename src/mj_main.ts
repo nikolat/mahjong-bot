@@ -616,8 +616,12 @@ const execNaku = (event: NostrEvent, pubkey: string, actions: string[]): [string
 				const content_say = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY say nostr:${nip19.npubEncode(players[i])} ron`;
 				const tags_say = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
 				res.push([content_say, tags_say]);
+				if (savedDoratsuchi !== undefined) {//槍槓
+					res.push(savedDoratsuchi);
+					savedDoratsuchi = undefined;
+				}
 				const content = getScoreView(i, savedSutehai, false) + '\n'
-				+ `${tehaiToEmoji(arTehai[i])} :${convertEmoji(savedSutehai)}:`;
+					+ `${tehaiToEmoji(arTehai[i])} :${convertEmoji(savedSutehai)}:`;
 				const tags = [...getTagsAirrep(event), ...getTagsEmoji(addHai(arTehai[i], savedSutehai))];
 				res.push([content, tags]);
 				reset_game();
