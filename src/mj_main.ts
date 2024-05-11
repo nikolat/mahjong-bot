@@ -388,7 +388,7 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
 				savedKakan.push([content_sutehai, tags_sutehai]);
 				//槍槓が可能であれば処理を分ける
 				if (naku.length > 0) {
-					savedSutehai = savedTsumo;
+					savedSutehai = pai;
 					return [...res, ...naku];
 				}
 				else {
@@ -540,7 +540,6 @@ const setAnkan = (nFuroPlayer: number, ankanHai: string): void => {
 	arChihouChance = [false, false, false, false];
 	visiblePai += ankanHai.repeat(4);
 };
-
 
 const addFuro = (tehai: string, furo: string, s1: string, s2: string): string => {
 	const sortedFuro = stringToArrayWithFuro(furo)[0];
@@ -735,15 +734,15 @@ const execNaku = (event: NostrEvent, pubkey: string, actions: string[]): [string
 			}
 			break;
 		case 'no':
-			if (savedKakan !== undefined) {
-				dResponseNeed.set(players[i], 'sutehai?');
-				const resKakan = savedKakan;
-				savedKakan = undefined;
-				return resKakan;
-			}
 			break;
 		default:
 			throw new TypeError(`action "${actions[0]}" is not supported`);
+	}
+	if (savedKakan !== undefined) {
+		dResponseNeed.set(players[i], 'sutehai?');
+		const resKakan = savedKakan;
+		savedKakan = undefined;
+		return [...res, ...resKakan];
 	}
 	return [...res, ...sendNextTurn(event)];
 };
