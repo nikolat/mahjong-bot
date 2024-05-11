@@ -388,6 +388,7 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
 				savedKakan.push([content_sutehai, tags_sutehai]);
 				//槍槓が可能であれば処理を分ける
 				if (naku.length > 0) {
+					savedSutehai = savedTsumo;
 					return [...res, ...naku];
 				}
 				else {
