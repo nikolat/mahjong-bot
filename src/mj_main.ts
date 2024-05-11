@@ -1,5 +1,5 @@
 import { type NostrEvent, nip19 } from 'nostr-tools';
-import { getShanten, getShantenYaku } from './mjlib/mj_shanten';
+import { getShanten } from './mjlib/mj_shanten';
 import { canRichi, countKantsu, getAnkanHaiBest, getChiMaterial, getChiMaterialBest, naniwokiru, shouldDaiminkan, shouldPon, shouldRichi } from './mjlib/mj_ai';
 import { getScore } from './mjlib/mj_score';
 import { addHai, compareFn, getDoraFromDorahyouji, paikind, removeHai, stringToArrayWithFuro } from './mjlib/mj_common';
@@ -731,7 +731,7 @@ const canAnkan = (nPlayer: number, tsumoHai: string, ankanHaiSelected?: string):
 	if (arYama.length - nYamaIndex === 0)
 		return false;
 	const ak: number[] = arTehai.map(t => countKantsu(t));
-	if (ak[0] + ak[1] + ak[2] + ak[3] == 4)
+	if (ak[0] + ak[1] + ak[2] + ak[3] === 4)
 		return false;
 	const arAnkanHai: string[] = getAnkanHai(addHai(arTehai[nPlayer], tsumoHai));
 	if (arAnkanHai.length === 0)
@@ -770,7 +770,7 @@ const getAnkanHai = (hai: string): string[] => {
 	const arHai: string[] = stringToArrayWithFuro(hai)[0];
 	const arRet: string[] = [];
 	for (const h of new Set<string>(arHai)) {
-		if (arHai.filter(h => h === hai).length >= 4)
+		if (arHai.filter(e => e === h).length >= 4)
 			arRet.push(h);
 	}
 	return arRet;
