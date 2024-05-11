@@ -163,6 +163,45 @@ export const getAnkanHaiBest = (
 	return '';
 };
 
+export const getKakanHaiBest = (
+	tehai: string,
+	tsumoHai: string,
+	bafuHai: string,
+	jifuHai: string,
+	aryPlayerRichi: number[],
+): string => {
+	//誰かがリーチしていたらカンしない
+	for (const p of aryPlayerRichi) {
+		if (p >= 0)
+			return '';
+	}
+	const tehaiAddTsumo = addHai(tehai, tsumoHai);
+	const arKakanHai: string[] = getKakanHai(tehaiAddTsumo);
+	const shantenBefore = getShantenYaku(tehai, bafuHai, jifuHai)[0];
+	const arKakanHaiUseful: string[] = [];
+	for (const h of arKakanHai) {
+		let strTehai = tehaiAddTsumo.replace(`<${h.repeat(3)}>`, `<${h.repeat(4)}>`);
+		strTehai = removeHai(strTehai, h);
+		const shantenAfter = getShantenYaku(strTehai, bafuHai, jifuHai)[0];
+		if (shantenAfter <= shantenBefore)
+			arKakanHaiUseful.push(h);
+	}
+	if (arKakanHaiUseful.length > 0)
+		return any(arKakanHaiUseful);
+	return '';
+};
+
+const getKakanHai = (tehai: string): string[] => {
+	const arHai: string[] = stringToArrayWithFuro(tehai)[0]
+	const arRet: string[] = []
+	for (const h of arHai) {
+		if (tehai.includes(`<${h.repeat(3)}>`)) {
+			arRet.push(h);
+		}
+	}
+	return arRet;
+};
+
 export const shouldRichi = (
 	strTehai13: string,
 	strTsumo: string,

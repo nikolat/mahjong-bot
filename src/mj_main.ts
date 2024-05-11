@@ -1,6 +1,6 @@
 import { type NostrEvent, nip19 } from 'nostr-tools';
 import { getShanten } from './mjlib/mj_shanten';
-import { canRichi, countKantsu, getAnkanHaiBest, getChiMaterial, getChiMaterialBest, naniwokiru, shouldDaiminkan, shouldPon, shouldRichi } from './mjlib/mj_ai';
+import { canRichi, countKantsu, getAnkanHaiBest, getChiMaterial, getChiMaterialBest, getKakanHaiBest, naniwokiru, shouldDaiminkan, shouldPon, shouldRichi } from './mjlib/mj_ai';
 import { getScore } from './mjlib/mj_score';
 import { addHai, compareFn, getDoraFromDorahyouji, paikind, removeHai, stringToArrayWithFuro } from './mjlib/mj_common';
 import { getMachi } from './mjlib/mj_machi';
@@ -85,6 +85,7 @@ let nYamaIndex = 0;
 let arTehai: string[];
 let savedTsumo: string;
 let savedDoratsuchi: [string, string[][]] | undefined;
+let savedKakan: [string, string[][]][] | undefined;
 let savedSutehai: string;
 let currentPlayer: number;
 let reservedNaku = new Map<string, string[]>();
@@ -338,6 +339,67 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
 			}
 			break;
 		case 'kakan':
+			if (canKakan(i, savedTsumo, pai)) {
+				arTehai[i] = addHai(arTehai[i], savedTsumo);
+				isRinshanChance = true;
+				const furoHai = pai;
+				setKakan(i, pai);
+				const strDorahyoujiNew = arYama[52 + dorahyouji.length / 2];
+				dorahyouji += strDorahyoujiNew;
+				visiblePai += strDorahyoujiNew;
+				//発声通知
+				const content_say = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY say nostr:${nip19.npubEncode(players[i])} kan`;
+				const tags_say = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+				res.push([content_say, tags_say]);
+				//晒した牌通知
+				const content_open = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY open nostr:${nip19.npubEncode(players[i])} ${furoHai}`;
+				const tags_open = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+				res.push([content_open, tags_open]);
+				//この時点でロン(槍槓)を受け付ける必要がある
+				const naku: [string, string[][]][] = [];
+				for (const index of [0, 1, 2, 3].filter(idx => idx !== i)) {
+					const action: string[] = [];
+					if (canRon(index, pai))
+						action.push('ron');
+					if (action.length > 0) {
+						dResponseNeed.set(players[index], 'naku?');
+						const content = `${tehaiToEmoji(arTehai[index])} ${tehaiToEmoji(pai)}\nnostr:${nip19.npubEncode(players[index])} GET naku? ${action.join(' ')}`;
+						const tags = [...getTagsAirrep(event), ['p', players[index], ''], ...getTagsEmoji(addHai(arTehai[index], pai))];
+						naku.push([content, tags]);
+					}
+				}
+				savedTsumo = arYama[nYamaIndex++];
+				savedKakan = [];
+				//ツモ通知
+				const content_tsumo = `nostr:${nip19.npubEncode(players[i])} NOTIFY tsumo nostr:${nip19.npubEncode(players[i])} ${arYama.length - nYamaIndex} ${savedTsumo}`;
+				const tags_tsumo = [...getTagsAirrep(event), ['p', players[i], '']];
+				savedKakan.push([content_tsumo, tags_tsumo]);
+				//dora通知
+				const content_dora = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY dora ${strDorahyoujiNew}`;
+				const tags_dora = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+				savedDoratsuchi = [content_dora, tags_dora];
+				//捨て牌問い合わせ
+				dResponseNeed.set(players[i], 'sutehai?');
+				const content_sutehai = `${tehaiToEmoji(arTehai[i])} ${tehaiToEmoji(savedTsumo)}\nnostr:${nip19.npubEncode(players[i])} GET sutehai?`;
+				const tags_sutehai = [...getTagsAirrep(event), ['p', players[i], ''], ...getTagsEmoji(addHai(arTehai[i], savedTsumo))];
+				savedKakan.push([content_sutehai, tags_sutehai]);
+				//槍槓が可能であれば処理を分ける
+				if (naku.length > 0) {
+					return naku;
+				}
+				else {
+					const resFinal = [...res, ...savedKakan];
+					savedKakan = undefined;
+					return resFinal;
+				}
+			}
+			else {
+				const content = `You cannot ankan ${pai} .`;
+				const tags = getTagsReply(event);
+				res.push([content, tags]);
+				savedSutehai = savedTsumo;
+			}
+			break;
 		default:
 			throw new TypeError(`action ${action} is not supported`);
 	}
@@ -457,6 +519,15 @@ const setFuro = (nFuroPlayer: number, nSutePlayer: number, sute: string, haiUsed
 	visiblePai += haiUsed;
 };
 
+const setKakan = (nFuroPlayer: number, kakanHai: string) => {
+	arTehai[nFuroPlayer] = removeHai(arTehai[nFuroPlayer], kakanHai);
+	arTehai[nFuroPlayer] = arTehai[nFuroPlayer].replace(kakanHai.repeat(3), kakanHai.repeat(4));
+	arKakanHistory[nFuroPlayer].push(kakanHai);
+	arIppatsuChance = [false, false, false, false];
+	arChihouChance = [false, false, false, false];
+	visiblePai += kakanHai;
+};
+
 const setAnkan = (nFuroPlayer: number, ankanHai: string): void => {
 	arTehai[nFuroPlayer] = removeHai(arTehai[nFuroPlayer], ankanHai.repeat(4));
 	arTehai[nFuroPlayer] = addFuro(arTehai[nFuroPlayer], ankanHai.repeat(4), '(', ')');
@@ -464,6 +535,7 @@ const setAnkan = (nFuroPlayer: number, ankanHai: string): void => {
 	arChihouChance = [false, false, false, false];
 	visiblePai += ankanHai.repeat(4);
 };
+
 
 const addFuro = (tehai: string, furo: string, s1: string, s2: string): string => {
 	const sortedFuro = stringToArrayWithFuro(furo)[0];
@@ -654,6 +726,11 @@ const execNaku = (event: NostrEvent, pubkey: string, actions: string[]): [string
 			}
 			break;
 		case 'no':
+			if (savedKakan !== undefined) {
+				const resKakan = savedKakan;
+				savedKakan = undefined;
+				return resKakan;
+			}
 			break;
 		default:
 			throw new TypeError(`action "${actions[0]}" is not supported`);
@@ -776,6 +853,32 @@ const getAnkanHai = (hai: string): string[] => {
 	return arRet;
 };
 
+const canKakan = (nPlayer: number, tsumoHai: string, kakanHaiSelected?: string): boolean => {
+	if (arYama.length - nYamaIndex === 0)
+		return false;
+	const ak: number[] = arTehai.map(t => countKantsu(t));
+	if (ak[0] + ak[1] + ak[2] + ak[3] === 4)
+		return false;
+	const arKakanHai: string[] = getKakanHai(addHai(arTehai[nPlayer], tsumoHai));
+	if (kakanHaiSelected !== undefined && !arKakanHai.includes(kakanHaiSelected))
+		return false;
+	if (arKakanHai.length > 0)
+		return true;
+	return false;
+};
+
+const getKakanHai = (hai: string): string[] => {
+	const arHai: string[][] = stringToArrayWithFuro(hai);
+	const arHaiWithoutFuro: string[] = arHai[0];
+	const arMinko: string[] = arHai[1].filter(f => f.length === 6 && f.slice(0, 2) === f.slice(2, 4));
+	const arRet: string[] = [];
+	for (const m of arMinko) {
+		if (arHaiWithoutFuro.includes(m))
+			arRet.push(m);
+	}
+	return arRet;
+};
+
 export const res_c_sutehai_call = (event: NostrEvent): [string, string[][]][] => {
 	const tsumo = savedTsumo;
 	if (!tsumo) {
@@ -788,6 +891,7 @@ export const res_c_sutehai_call = (event: NostrEvent): [string, string[][]][] =>
 	let select: string;
 	let dahai = '';
 	let ankanHai: string | undefined;
+	let kakanHai: string | undefined;
 	if (shanten >= 0) {
 		if (isRichi) {//リーチ済ならツモ切り
 			dahai = tsumo;
@@ -804,8 +908,10 @@ export const res_c_sutehai_call = (event: NostrEvent): [string, string[][]][] =>
 				[0, 1, 2, 3].map(p => getGenbutsu(p).join('')),
 				getVisiblePai(i),
 			);
+			if (canKakan(i, tsumo))
+				kakanHai = getKakanHaiBest(arTehai[i], tsumo, ['1z', '2z'][bafu], getJifuHai(i), arRichiJunme);
 		}
-		if (canAnkan(i, tsumo, tsumo))
+		if (canAnkan(i, tsumo))
 			ankanHai = getAnkanHaiBest(tsumo, isRichi);
 	}
 	if (shanten === -1) {
@@ -820,6 +926,10 @@ export const res_c_sutehai_call = (event: NostrEvent): [string, string[][]][] =>
 	else if (ankanHai !== undefined) {
 		action = 'ankan';
 		select = ankanHai;
+	}
+	else if (kakanHai !== undefined) {
+		action = 'kakan';
+		select = kakanHai;
 	}
 	else {
 		action = 'sutehai';
