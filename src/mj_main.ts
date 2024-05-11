@@ -383,15 +383,15 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
 				const tags_dora = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
 				savedDoratsuchi = [content_dora, tags_dora];
 				//捨て牌問い合わせ
-				dResponseNeed.set(players[i], 'sutehai?');
 				const content_sutehai = `${tehaiToEmoji(arTehai[i])} ${tehaiToEmoji(savedTsumo)}\nnostr:${nip19.npubEncode(players[i])} GET sutehai?`;
 				const tags_sutehai = [...getTagsAirrep(event), ['p', players[i], ''], ...getTagsEmoji(addHai(arTehai[i], savedTsumo))];
 				savedKakan.push([content_sutehai, tags_sutehai]);
 				//槍槓が可能であれば処理を分ける
 				if (naku.length > 0) {
-					return naku;
+					return [...res, ...naku];
 				}
 				else {
+					dResponseNeed.set(players[i], 'sutehai?');
 					const resFinal = [...res, ...savedKakan];
 					savedKakan = undefined;
 					return resFinal;
@@ -735,6 +735,7 @@ const execNaku = (event: NostrEvent, pubkey: string, actions: string[]): [string
 			break;
 		case 'no':
 			if (savedKakan !== undefined) {
+				dResponseNeed.set(players[i], 'sutehai?');
 				const resKakan = savedKakan;
 				savedKakan = undefined;
 				return resKakan;
