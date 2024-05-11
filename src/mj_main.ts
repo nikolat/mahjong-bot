@@ -258,11 +258,15 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
 	switch (action) {
 		case 'tsumo':
 			if (canTsumo(i, savedTsumo)) {// 和了
+				const content_say = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY say nostr:${nip19.npubEncode(players[i])} tsumo`;
+				const tags_say = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+				res.push([content_say, tags_say]);
 				const content = getScoreView(i, savedTsumo, true) + '\n'
 					+ `${tehaiToEmoji(arTehai[i])} :${convertEmoji(savedTsumo)}:`;
 				const tags = [...getTagsAirrep(event), ...getTagsEmoji(addHai(arTehai[i], savedTsumo))];
+				res.push([content, tags]);
 				reset_game();
-				return [[content, tags]];
+				return res;
 			}
 			else {
 				const content = 'You cannot tsumo.';
@@ -609,11 +613,15 @@ const execNaku = (event: NostrEvent, pubkey: string, actions: string[]): [string
 	switch (actions[0]) {
 		case 'ron':
 			if (canRon(i, savedSutehai)) {
+				const content_say = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY say nostr:${nip19.npubEncode(players[i])} ron`;
+				const tags_say = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+				res.push([content_say, tags_say]);
 				const content = getScoreView(i, savedSutehai, false) + '\n'
 				+ `${tehaiToEmoji(arTehai[i])} :${convertEmoji(savedSutehai)}:`;
 				const tags = [...getTagsAirrep(event), ...getTagsEmoji(addHai(arTehai[i], savedSutehai))];
+				res.push([content, tags]);
 				reset_game();
-				return [[content, tags]];
+				return res;
 			}
 			else {
 				const content = 'You cannot ron.';
