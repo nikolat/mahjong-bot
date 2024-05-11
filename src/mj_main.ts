@@ -203,8 +203,8 @@ const getScoreView = (i: number, atarihai: string, isTsumo: boolean) => {
 		isTsumo,
 		richi,
 		arIppatsuChance[i],
-		false,
-		false,
+		isRinshanChance && !isTsumo,
+		isRinshanChance && isTsumo,
 		arYama.length === nYamaIndex,
 		arChihouChance[i],
 	);
@@ -486,7 +486,7 @@ const canTsumo = (nPlayer: number, atariHai: string): boolean => {
 		richi,
 		arIppatsuChance[nPlayer],
 		false,
-		false,
+		isRinshanChance,
 		arYama.length === nYamaIndex,
 		arChihouChance[nPlayer],
 	)[0];
@@ -761,7 +761,21 @@ const canRon = (nPlayer: number, atariHai: string): boolean => {
 		}
 	}
 	//役があるかどうか検証する
-	const score = getScore(arTehai[nPlayer], atariHai, ['1z', '2z'][bafu], getJifuHai(nPlayer), getDoraFromDorahyouji(dorahyouji), false)[0];
+	const richi: number = arRichiJunme[nPlayer] === 0 ? 2 : arRichiJunme[nPlayer] > 0 ? 1 : 0;
+	const score = getScore(
+		arTehai[nPlayer],
+		atariHai,
+		['1z', '2z'][bafu],
+		getJifuHai(nPlayer),
+		getDoraFromDorahyouji(dorahyouji),
+		false,
+		richi,
+		arIppatsuChance[nPlayer],
+		isRinshanChance,
+		false,
+		arYama.length === nYamaIndex,
+		arChihouChance[nPlayer],
+	)[0];
 	if (score <= 0)
 		return false;
 	return true;
