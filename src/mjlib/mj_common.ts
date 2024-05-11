@@ -76,7 +76,7 @@ export const addHai = (tehai: string, hai: string): string => {
 export const removeHai = (tehai: string, hai: string): string => {
 	let r = tehai;
 	for (const p of stringToArrayWithFuro(hai)[0]) {
-		r = r.replace(new RegExp(hai), '');
+		r = r.replace(new RegExp(p), '');
 	}
 	return r
 };
