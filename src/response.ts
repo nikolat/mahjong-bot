@@ -150,7 +150,7 @@ const res_s_naku = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, str
 	const action = match[1];
 	const pai1 = match[2];
 	const pai2 = match[3];
-	if (action === 'chi' && (pai1 === null || pai2 === null))
+	if (action === 'chi' && !(/[1-9][mspz]/.test(pai1) && /[1-9][mspz]/.test(pai2)))
 		return [['usage: naku? chi <pi1> <pi2>', getTagsReply(event)]];
 	return res_s_naku_call(event, action, pai1, pai2);
 };

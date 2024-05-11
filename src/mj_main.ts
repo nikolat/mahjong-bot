@@ -224,7 +224,7 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
 	currentPlayer = i;
 	if (dResponseNeed.get(event.pubkey) !== command) {
 		const content = `You are not required to send "${command}"`;
-		const tags = [...getTagsReply(event), ['p', event.pubkey, '']];
+		const tags = getTagsReply(event);
 		return [[content, tags]];
 	}
 	dResponseNeed.set(event.pubkey, '');
@@ -386,7 +386,7 @@ export const res_s_naku_call = (event: NostrEvent, action: string, pai1: string,
 	const command = 'naku?';
 	if (dResponseNeed.get(event.pubkey) !== command) {
 		const content = `You are not required to send "${command}"`;
-		const tags = [...getTagsReply(event), ['p', event.pubkey, '']];
+		const tags = getTagsReply(event);
 		return [[content, tags]];
 	}
 	reservedNaku.set(event.pubkey, [action, pai1, pai2]);
@@ -484,6 +484,13 @@ const execNaku = (event: NostrEvent, pubkey: string, actions: string[]): [string
 			if (canChi(i, sutehai)) {
 				const hai1: string = actions[1];
 				const hai2: string = actions[2];
+				const a: string[] = getChiMaterial(arTehai[i], sutehai);
+				if (!a.includes(`${hai1}${hai2}`)) {
+					const content = 'You cannot chi with ${hai1}${hai2}.';
+					const tags = getTagsReply(event);
+					res.push([content, tags]);
+					break;
+				}
 				const furoArray = [sutehai, hai1, hai2];
 				furoArray.sort(compareFn);
 				const furoHai = furoArray.join('');
