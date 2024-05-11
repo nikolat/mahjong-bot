@@ -1,6 +1,6 @@
 import { type EventTemplate, type VerifiedEvent, type NostrEvent, SimplePool, nip19 } from 'nostr-tools';
 import { Mode, Signer, getTagsAirrep, getTagsReply } from './utils';
-import { mahjongGameStart, res_c_naku_call, res_c_sutehai_after_furo_call, res_c_sutehai_call, res_s_gamestart_call, res_s_join_call, res_s_naku_call, res_s_reset_call, res_s_sutehai_call } from './mj_main';
+import { mahjongGameStart, res_c_naku_call, res_c_sutehai_after_furo_call, res_c_sutehai_call, res_s_debug_call, res_s_gamestart_call, res_s_join_call, res_s_naku_call, res_s_reset_call, res_s_sutehai_call } from './mj_main';
 
 export const getResponseEvent = async (requestEvent: NostrEvent, signer: Signer, mode: Mode, pool: SimplePool): Promise<VerifiedEvent[] | null> => {
 	if (requestEvent.pubkey === signer.getPublicKey()) {
@@ -59,6 +59,7 @@ const getResmap = (mode: Mode): [RegExp, (event: NostrEvent, mode: Mode, regstr:
 		[/^(nostr:npub1\w{58}\s+)?gamestart/, res_s_gamestart],
 		[/join$/, res_s_join],
 		[/reset$/, res_s_reset],
+		[/debug\s+(([1-9][mpsz])+)$/, res_s_debug],
 		[/sutehai\?\s(sutehai|ankan|kakan|richi|tsumo)\s?([1-9][mpsz])?/, res_s_sutehai],
 		[/^(sutehai\?)?([1-9][mpsz])/, res_s_sutehai],
 		[/naku\?\s(no|ron|kan|pon|chi)\s?([1-9][mpsz])?\s?([1-9][mpsz])?/, res_s_naku],
@@ -129,6 +130,16 @@ const res_s_join = (event: NostrEvent): [string, string[][]][] | null => {
 const res_s_reset = (event: NostrEvent): [string, string[][]][] | null => {
 	res_s_reset_call();
 	return [['Data cleared.', getTagsAirrep(event)]];
+};
+
+const res_s_debug = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, string[][]][] | null => {
+	const match = event.content.match(regstr);
+	if (match === null) {
+		throw new Error();
+	}
+	const yama: string = match[1];
+	res_s_debug_call(yama);
+	return [['Debug mode.', getTagsAirrep(event)]];
 };
 
 const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, string[][]][] => {

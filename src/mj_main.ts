@@ -26,6 +26,12 @@ export const res_s_reset_call = (): void => {
 	reset_game();
 };
 
+export const res_s_debug_call = (yama: string): void => {
+	debugYama = stringToArrayWithFuro(yama)[0];
+};
+
+let debugYama: string[] = [];
+
 const players: string[] = [];
 let arScore: number[];
 let tsumibou: number;
@@ -40,7 +46,10 @@ export const mahjongGameStart = (event: NostrEvent): [string, string[][]][] => {
 	kyotaku = 0;
 	bafu = 0;
 	kyoku = 1;
-	oyaIndex = Math.floor(Math.random() * 4);
+	if (debugYama.length > 0)
+		oyaIndex = 0;
+	else
+		oyaIndex = Math.floor(Math.random() * 4);
 	const seki = ['東', '南', '西', '北'];
 	const dSeki = new Map<string, string>();
 	const pNames: string[] = [];
@@ -85,7 +94,13 @@ const arBafu = ['東', '南'];
 
 const startKyoku = (event: NostrEvent): [string, string[][]][] => {
 	const res: [string, string[][]][] = [];
-	arYama = shuffle([...paikind, ...paikind, ...paikind, ...paikind]);
+	if (debugYama.length > 0) {
+		arYama = debugYama;
+		debugYama = [];
+	}
+	else {
+		arYama = shuffle([...paikind, ...paikind, ...paikind, ...paikind]);
+	}
 	for (let i = 0; i < players.length; i++) {
 		const t = arYama.slice(0 + 13*i, 13 + 13*i);
 		t.sort(compareFn);
