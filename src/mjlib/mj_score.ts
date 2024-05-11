@@ -46,26 +46,13 @@ export const getScore = (
 	let composition_group_first: string[];
 	let atama_hai: string;
 	let mentsu: string[][] = [];
-	let count_kantsu = 0;
+	const count_kantsu = hai_furo.filter(s => s.length === 8).length + hai_ankan.length;;
 	if (is_normal) {
 		composition_group_first = composition[0].split(',');
 		atama_hai = stringToArray(composition_group_first[0])[0];
 		for (let i = 1; i < composition_group_first.length; i++) {
 			const c = composition_group_first[i];
-			if (c.slice(0, 1) === '<') {
-				const s = c.slice(1, 1 + c.length - 2);
-				if (s.length == 8)
-					count_kantsu++;
-				mentsu.push(stringToArray(s));
-			}
-			else if (c.slice(0, 1) === '(') {
-				const s = c.slice(1, 9);
-				count_kantsu++;
-				mentsu.push(stringToArray(s));
-			}
-			else {
-				mentsu.push(stringToArray(c));
-			}
+			mentsu.push(stringToArray(c));
 		}
 	}
 	const ret_han = new Map<string, number>();
