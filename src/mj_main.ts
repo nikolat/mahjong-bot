@@ -289,7 +289,7 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
 		if (action.length > 0) {
 			dResponseNeed.set(players[index], 'naku?');
 			const content = `${tehaiToEmoji(arTehai[index])} ${tehaiToEmoji(savedSutehai)}\nnostr:${nip19.npubEncode(players[index])} GET naku? ${action.join(' ')}`;
-			const tags = [...getTagsAirrep(event), ['p', players[index], '']];
+			const tags = [...getTagsAirrep(event), ['p', players[index], ''], ...getTagsEmoji(addHai(arTehai[index], savedSutehai))];
 			naku.push([content, tags]);
 		}
 	}
