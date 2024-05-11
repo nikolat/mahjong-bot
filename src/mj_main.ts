@@ -286,7 +286,7 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
 			action.push('chi');
 		if (action.length > 0) {
 			dResponseNeed.set(players[index], 'naku?');
-			const content = `nostr:${nip19.npubEncode(players[index])}\nGET naku? ${action.join(' ')}`;
+			const content = `nostr:${nip19.npubEncode(players[index])} GET naku? ${action.join(' ')}`;
 			const tags = [...getTagsAirrep(event), ['p', players[index], '']];
 			naku.push([content, tags]);
 		}
@@ -311,6 +311,7 @@ const setSutehai = (sute: string, nPlayer: number) => {
 };
 
 const sendNextTurn = (event: NostrEvent): [string, string[][]][] => {
+	const res: [string, string[][]][] = [];
 	if (arYama[nYamaIndex] === undefined) {
 		const content = 'ryukyoku';
 		const tags = getTagsAirrep(event);
@@ -319,10 +320,16 @@ const sendNextTurn = (event: NostrEvent): [string, string[][]][] => {
 	setKyotaku(currentPlayer);
 	savedTsumo = arYama[nYamaIndex++];
 	const i2 = (currentPlayer + 1) % 4;
+	//ツモ通知
+	const content_tsumo = `NOTIFY tsumo nostr:${nip19.npubEncode(players[i2])} ${arYama.length - nYamaIndex} ${savedTsumo}`;
+	const tags_tsumo = [...getTagsAirrep(event), ['p', players[i2], '']];
+	res.push([content_tsumo, tags_tsumo]);
+	//捨て牌問い合わせ
 	dResponseNeed.set(players[i2], 'sutehai?');
-	const content = `NOTIFY tsumo nostr:${nip19.npubEncode(players[i2])} ${arYama.length - nYamaIndex} ${savedTsumo}\n${tehaiToEmoji(arTehai[i2])} :${convertEmoji(savedTsumo)}:\nGET sutehai?`;
-	const tags = [...getTagsAirrep(event), ['p', players[i2], ''], ...getTagsEmoji(addHai(arTehai[i2], savedTsumo))];
-	return [[content, tags]];
+	const content_sutehai = `${tehaiToEmoji(arTehai[i2])} ${tehaiToEmoji(savedTsumo)}\nnostr:${nip19.npubEncode(players[i2])} GET sutehai?`;
+	const tags_sutehai = [...getTagsAirrep(event), ['p', players[i2], ''], ...getTagsEmoji(addHai(arTehai[i2], savedTsumo))];
+	res.push([content_sutehai, tags_sutehai]);
+	return res;
 };
 
 const canTsumo = (nPlayer: number, atariHai: string): boolean => {
