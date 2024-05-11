@@ -203,6 +203,15 @@ const canRichi = (
 	return false;
 };
 
+export const shouldDaiminkan = (): boolean => {
+	return false;
+};
+
+export const countKantsu = (tehai: string) => {
+	const [normal, furo, ankan] = stringToArrayWithFuro(tehai);
+	return furo.filter(s => s.length === 8).length + ankan.length;
+};
+
 export const shouldPon = (
 	tehai: string,
 	sutehai: string,

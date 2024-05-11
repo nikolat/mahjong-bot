@@ -129,6 +129,15 @@ export const compareFn = (a: string, b: string) => {
 };
 
 export const getDoraFromDorahyouji = (hai: string): string => {
+	const a: string[] = stringToArrayWithFuro(hai)[0];
+	const r: string[] = [];
+	for (const p of a) {
+		r.push(doraConvert(p));
+	}
+	return r.join('');
+};
+
+const doraConvert = (hai: string): string => {
 	const d = new Map<string, string>([
 		['1m', '2m'],
 		['2m', '3m'],

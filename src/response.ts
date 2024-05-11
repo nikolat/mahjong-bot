@@ -68,8 +68,7 @@ const getResmap = (mode: Mode): [RegExp, (event: NostrEvent, mode: Mode, regstr:
 		[/ping$/, res_ping],
 		[/join$/, res_c_join],
 		[/gamestart$/, res_c_gamestart],
-		[/NOTIFY\stsumo\snostr:npub1\w{58}\s\d+\s([0-9][mpsz]).+GET\ssutehai\?$/s, res_c_sutehai],
-		[/GET\ssutehai\?$/s, res_c_sutehai_after_furo],
+		[/GET\ssutehai\?$/s, res_c_sutehai],
 		[/GET\snaku\?\s(((ron|kan|pon|chi)\s)*(ron|kan|pon|chi))$/s, res_c_naku],
 	];
 //	const resmapUnyu: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp, signer: Signer, pool: SimplePool) => Promise<null>][] = [
@@ -166,16 +165,7 @@ const res_c_gamestart = (event: NostrEvent): [string, string[][]][] => {
 };
 
 const res_c_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, string[][]][] => {
-	const match = event.content.match(regstr);
-	if (match === null) {
-		throw new Error();
-	}
-	const tsumo = match[1];
-	return res_c_sutehai_call(event, tsumo);
-};
-
-const res_c_sutehai_after_furo = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, string[][]][] => {
-	return res_c_sutehai_after_furo_call(event);
+	return res_c_sutehai_call(event);
 };
 
 const res_c_naku = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, string[][]][] => {
