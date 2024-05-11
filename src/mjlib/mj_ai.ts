@@ -153,18 +153,27 @@ const any = (array: string[]): string => {
 	return array[Math.floor(Math.random() * array.length)];
 };
 
+export const getAnkanHaiBest = (
+	strTsumo: string,
+	isRichi: boolean,
+): string => {
+	if (isRichi) {
+		return strTsumo;
+	}
+	return '';
+};
+
 export const shouldRichi = (
 	strTehai13: string,
-	shanten: number,
+	strTsumo: string,
 	isRichi: boolean,
 	nokori: number,
-	strTsumo: string,
 	dahai: string,
 	strBafuhai: string,
 	strJifuhai: string,
 	strDorahyouji: string,
 ): boolean => {
-	if (!canRichi(strTehai13, shanten, isRichi, nokori)) {
+	if (!canRichi(strTehai13, strTsumo, isRichi, nokori)) {
 		return false;
 	}
 	//親ならリーチする
@@ -191,12 +200,13 @@ export const shouldRichi = (
 	return true;
 };
 
-const canRichi = (
+export const canRichi = (
 	tehai: string,
-	shanten: number,
+	strTsumo: string,
 	isRichi: boolean,
 	nokori: number,
 ): boolean => {
+	const shanten = getShanten(addHai(tehai, strTsumo))[0];
 	if (!tehai.includes('<') && shanten === 0 && !isRichi && nokori >= 4) {
 		return true;
 	}

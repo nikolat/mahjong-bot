@@ -1,6 +1,6 @@
 import { type NostrEvent, nip19 } from 'nostr-tools';
-import { getShanten } from './mjlib/mj_shanten';
-import { countKantsu, getChiMaterial, getChiMaterialBest, naniwokiru, shouldDaiminkan, shouldPon, shouldRichi } from './mjlib/mj_ai';
+import { getShanten, getShantenYaku } from './mjlib/mj_shanten';
+import { canRichi, countKantsu, getAnkanHaiBest, getChiMaterial, getChiMaterialBest, naniwokiru, shouldDaiminkan, shouldPon, shouldRichi } from './mjlib/mj_ai';
 import { getScore } from './mjlib/mj_score';
 import { addHai, compareFn, getDoraFromDorahyouji, paikind, removeHai, stringToArrayWithFuro } from './mjlib/mj_common';
 import { getMachi } from './mjlib/mj_machi';
@@ -252,20 +252,76 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
 				const content = 'You cannot tsumo.';
 				const tags = getTagsReply(event);
 				res.push([content, tags]);
+				savedSutehai = savedTsumo;
 			}
-			savedSutehai = savedTsumo;
 			break;
 		case 'richi':
-			arRichiJunme[i] = arKawa[i].length;
-			const content = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY say nostr:${nip19.npubEncode(players[i])} richi`;
-			const tags = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
-			res.push([content, tags]);
-			savedSutehai = pai;
+			if (canRichi(addHai(arTehai[i], savedTsumo), savedTsumo, arRichiJunme[i] >= 0, arYama.length - nYamaIndex)) {
+				arRichiJunme[i] = arKawa[i].length;
+				const content = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY say nostr:${nip19.npubEncode(players[i])} richi`;
+				const tags = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+				res.push([content, tags]);
+				savedSutehai = pai;
+			}
+			else {
+				const content = 'You cannot richi.';
+				const tags = getTagsReply(event);
+				res.push([content, tags]);
+				savedSutehai = savedTsumo;
+			}
 			break;
 		case 'sutehai':
-			savedSutehai = pai;
+			const sutehaikouho = stringToArrayWithFuro(addHai(arTehai[i], savedTsumo))[0];
+			if (sutehaikouho.includes(pai) && !(arRichiJunme[i] >= 0 && pai !== savedTsumo)) {
+				savedSutehai = pai;
+			}
+			else {
+				const content = `You cannot sutehai ${pai} .`;
+				const tags = getTagsReply(event);
+				res.push([content, tags]);
+				savedSutehai = savedTsumo;
+			}
 			break;
 		case 'ankan':
+			if (canAnkan(i, savedTsumo, pai)) {
+				arTehai[i] = addHai(arTehai[i], savedTsumo);
+				isRinshanChance = true;
+				const furoHai = pai.repeat(4);
+				setAnkan(i, pai);
+				const strDorahyoujiNew = arYama[52 + dorahyouji.length / 2];
+				dorahyouji += strDorahyoujiNew;
+				visiblePai += strDorahyoujiNew;
+				savedTsumo = arYama[nYamaIndex++];
+				//発声通知
+				const content_say = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY say nostr:${nip19.npubEncode(players[i])} kan`;
+				const tags_say = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+				res.push([content_say, tags_say]);
+				//晒した牌通知
+				const content_open = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY open nostr:${nip19.npubEncode(players[i])} ${furoHai}`;
+				const tags_open = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+				res.push([content_open, tags_open]);
+				//ツモ通知
+				const content_tsumo = `nostr:${nip19.npubEncode(players[i])} NOTIFY tsumo nostr:${nip19.npubEncode(players[i])} ${arYama.length - nYamaIndex} ${savedTsumo}`;
+				const tags_tsumo = [...getTagsAirrep(event), ['p', players[i], '']];
+				res.push([content_tsumo, tags_tsumo]);
+				//dora通知
+				const content_dora = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY dora ${strDorahyoujiNew}`;
+				const tags_dora = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+				res.push([content_dora, tags_dora]);
+				//捨て牌問い合わせ
+				dResponseNeed.set(players[i], 'sutehai?');
+				const content_sutehai = `${tehaiToEmoji(arTehai[i])} ${tehaiToEmoji(savedTsumo)}\nnostr:${nip19.npubEncode(players[i])} GET sutehai?`;
+				const tags_sutehai = [...getTagsAirrep(event), ['p', players[i], ''], ...getTagsEmoji(addHai(arTehai[i], savedTsumo))];
+				res.push([content_sutehai, tags_sutehai]);
+				return res;
+			}
+			else {
+				const content = `You cannot ankan ${pai} .`;
+				const tags = getTagsReply(event);
+				res.push([content, tags]);
+				savedSutehai = savedTsumo;
+			}
+			break;
 		case 'kakan':
 		default:
 			throw new TypeError(`action ${action} is not supported`);
@@ -362,7 +418,7 @@ const canTsumo = (nPlayer: number, atariHai: string): boolean => {
 	return true;
 };
 
-const setKyotaku = (nPlayer: number) => {
+const setKyotaku = (nPlayer: number): void => {
 	if (arRichiJunme[nPlayer] === arKawa[nPlayer].length - 1) {
 		kyotaku++;
 		arScore[nPlayer] -= 1000;
@@ -376,7 +432,7 @@ const setKyotaku = (nPlayer: number) => {
 	arChihouChance[nPlayer] = false;
 };
 
-const setFuro = (nFuroPlayer: number, nSutePlayer: number, sute: string, haiUsed: string) => {
+const setFuro = (nFuroPlayer: number, nSutePlayer: number, sute: string, haiUsed: string): void => {
 	arTehai[nFuroPlayer] = removeHai(arTehai[nFuroPlayer], haiUsed);
 	arTehai[nFuroPlayer] = addFuro(arTehai[nFuroPlayer], sute + haiUsed, '<', '>');
 	arFuroJunme[nSutePlayer].push(arKawa[nSutePlayer].length - 1);
@@ -386,7 +442,15 @@ const setFuro = (nFuroPlayer: number, nSutePlayer: number, sute: string, haiUsed
 	visiblePai += haiUsed;
 };
 
-const addFuro = (tehai: string, furo: string, s1: string, s2: string) => {
+const setAnkan = (nFuroPlayer: number, ankanHai: string): void => {
+	arTehai[nFuroPlayer] = removeHai(arTehai[nFuroPlayer], ankanHai.repeat(4));
+	arTehai[nFuroPlayer] = addFuro(arTehai[nFuroPlayer], ankanHai.repeat(4), '(', ')');
+	arIppatsuChance = [false, false, false, false];
+	arChihouChance = [false, false, false, false];
+	visiblePai += ankanHai.repeat(4);
+};
+
+const addFuro = (tehai: string, furo: string, s1: string, s2: string): string => {
 	const sortedFuro = stringToArrayWithFuro(furo)[0];
 	sortedFuro.sort(compareFn);
 	const strFuro = sortedFuro.join('');
@@ -481,22 +545,22 @@ const execNaku = (event: NostrEvent, pubkey: string, actions: string[]): [string
 				visiblePai += strDorahyoujiNew;
 				savedTsumo = arYama[nYamaIndex++];
 				//発声通知
-				const content = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY say nostr:${nip19.npubEncode(players[i])} kan`;
-				const tags = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
-				res.push([content, tags]);
+				const content_say = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY say nostr:${nip19.npubEncode(players[i])} kan`;
+				const tags_say = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+				res.push([content_say, tags_say]);
 				//晒した牌通知
-				const content2 = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY open nostr:${nip19.npubEncode(players[i])} ${furoHai}`;
-				const tags2 = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
-				res.push([content2, tags2]);
+				const content_open = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY open nostr:${nip19.npubEncode(players[i])} ${furoHai}`;
+				const tags_open = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+				res.push([content_open, tags_open]);
 				//ツモ通知
 				const content_tsumo = `nostr:${nip19.npubEncode(players[i])} NOTIFY tsumo nostr:${nip19.npubEncode(players[i])} ${arYama.length - nYamaIndex} ${savedTsumo}`;
 				const tags_tsumo = [...getTagsAirrep(event), ['p', players[i], '']];
 				res.push([content_tsumo, tags_tsumo]);
 				//捨て牌問い合わせ
 				dResponseNeed.set(players[i], 'sutehai?');
-				const content3 = `${tehaiToEmoji(arTehai[i])} ${tehaiToEmoji(savedTsumo)}\nnostr:${nip19.npubEncode(players[i])} GET sutehai?`;
-				const tags3 = [...getTagsAirrep(event), ['p', players[i], ''], ...getTagsEmoji(addHai(arTehai[i], savedTsumo))];
-				res.push([content3, tags3]);
+				const content_sutehai = `${tehaiToEmoji(arTehai[i])} ${tehaiToEmoji(savedTsumo)}\nnostr:${nip19.npubEncode(players[i])} GET sutehai?`;
+				const tags_sutehai = [...getTagsAirrep(event), ['p', players[i], ''], ...getTagsEmoji(addHai(arTehai[i], savedTsumo))];
+				res.push([content_sutehai, tags_sutehai]);
 				//dora通知
 				const content_dora = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY dora ${strDorahyoujiNew}`;
 				const tags_dora = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
@@ -648,6 +712,55 @@ const canDaiminkan = (nPlayer: number, suteHai: string): boolean => {
 	return false;
 };
 
+const canAnkan = (nPlayer: number, tsumoHai: string, ankanHaiSelected?: string): boolean => {
+	if (arYama.length - nYamaIndex === 0)
+		return false;
+	const ak: number[] = arTehai.map(t => countKantsu(t));
+	if (ak[0] + ak[1] + ak[2] + ak[3] == 4)
+		return false;
+	const arAnkanHai: string[] = getAnkanHai(addHai(arTehai[nPlayer], tsumoHai));
+	if (arAnkanHai.length === 0)
+		return false;
+	if (ankanHaiSelected !== undefined && !arAnkanHai.includes(ankanHaiSelected))
+		return false;
+	//リーチ後の場合
+	if (arRichiJunme[nPlayer] >= 0) {
+		//送りカンの場合
+		if (!arAnkanHai.includes(tsumoHai))
+			return false;
+		//和了の形が変わる場合
+		for (const ankanhai of arAnkanHai) {
+			if (ankanhai !== ankanHaiSelected)
+				continue
+			const tehaiNew = removeHai(addHai(arTehai[nPlayer], tsumoHai), ankanhai.repeat(4)) + `(${ankanhai.repeat(3)})`;
+			const [shanten, arPattern] = getShanten(tehaiNew);
+			if (shanten !== 0) {
+				continue;
+			}
+			for (const pattern of arPattern) {
+				const ap = pattern.split(',');
+				if (!ap.includes(ankanhai.repeat(3)))//常に暗刻でないとダメ
+					continue;
+			}
+			return true;
+		}
+		return false;
+	}
+	else {
+		return true;
+	}
+};
+
+const getAnkanHai = (hai: string): string[] => {
+	const arHai: string[] = stringToArrayWithFuro(hai)[0];
+	const arRet: string[] = [];
+	for (const h of new Set<string>(arHai)) {
+		if (arHai.filter(h => h === hai).length >= 4)
+			arRet.push(h);
+	}
+	return arRet;
+};
+
 export const res_c_sutehai_call = (event: NostrEvent): [string, string[][]][] => {
 	const tsumo = savedTsumo;
 	if (!tsumo) {
@@ -659,6 +772,7 @@ export const res_c_sutehai_call = (event: NostrEvent): [string, string[][]][] =>
 	let action: string;
 	let select: string;
 	let dahai = '';
+	let ankanHai: string | undefined;
 	if (shanten >= 0) {
 		if (isRichi) {//リーチ済ならツモ切り
 			dahai = tsumo;
@@ -676,15 +790,21 @@ export const res_c_sutehai_call = (event: NostrEvent): [string, string[][]][] =>
 				getVisiblePai(i),
 			);
 		}
+		if (canAnkan(i, tsumo, tsumo))
+			ankanHai = getAnkanHaiBest(tsumo, isRichi);
 	}
 	if (shanten === -1) {
 		const content = `nostr:${nip19.npubEncode(event.pubkey)} sutehai? tsumo\n:${convertEmoji(tsumo)}:`;
 		const tags = [...getTagsReply(event), ...getTagsEmoji(tsumo)];
 		return [[content, tags]];
 	}
-	else if (shouldRichi(arTehai[i], shanten, isRichi, arYama.length - nYamaIndex, tsumo, dahai, ['1z', '2z'][bafu], getJifuHai(i), dorahyouji)) {
+	else if (shouldRichi(arTehai[i], tsumo, isRichi, arYama.length - nYamaIndex, dahai, ['1z', '2z'][bafu], getJifuHai(i), dorahyouji)) {
 		action = 'richi';
 		select = dahai;
+	}
+	else if (ankanHai !== undefined) {
+		action = 'ankan';
+		select = ankanHai;
 	}
 	else {
 		action = 'sutehai';
