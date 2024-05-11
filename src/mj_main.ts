@@ -137,7 +137,7 @@ const startKyoku = (event: NostrEvent): [string, string[][]][] => {
 	res.push([content_tsumo, tags_tsumo]);
 	//捨て牌問い合わせ
 	dResponseNeed.set(players[oyaIndex], 'sutehai?');
-	const content_sutehai = `${tehaiToEmoji(arTehai[oyaIndex])}\nnostr:${nip19.npubEncode(players[oyaIndex])} GET sutehai?`;
+	const content_sutehai = `${tehaiToEmoji(arTehai[oyaIndex])} ${savedTsumo}\nnostr:${nip19.npubEncode(players[oyaIndex])} GET sutehai?`;
 	const tags_sutehai = [...getTagsAirrep(event), ['p', players[oyaIndex], ''], ...getTagsEmoji(addHai(arTehai[oyaIndex], savedTsumo))];
 	res.push([content_sutehai, tags_sutehai]);
 	return res;
@@ -485,7 +485,7 @@ const execNaku = (event: NostrEvent, pubkey: string, actions: string[]): [string
 				res.push([content_tsumo, tags_tsumo]);
 				//捨て牌問い合わせ
 				dResponseNeed.set(players[i], 'sutehai?');
-				const content3 = `${tehaiToEmoji(arTehai[i])}\nnostr:${nip19.npubEncode(players[i])} GET sutehai?`;
+				const content3 = `${tehaiToEmoji(arTehai[i])} ${savedTsumo}\nnostr:${nip19.npubEncode(players[i])} GET sutehai?`;
 				const tags3 = [...getTagsAirrep(event), ['p', players[i], ''], ...getTagsEmoji(addHai(arTehai[i], savedTsumo))];
 				res.push([content3, tags3]);
 				//dora通知
@@ -700,8 +700,8 @@ export const res_c_sutehai_after_furo_call = (event: NostrEvent): [string, strin
 		[0, 1, 2, 3].map(p => getGenbutsu(p).join('')),
 		getVisiblePai(i),
 	);
-	const content = `nostr:${nip19.npubEncode(event.pubkey)} sutehai? ${action} ${select}\n:${convertEmoji(sutehai)}:`;
-	const tags = [...getTagsReply(event), ...getTagsEmoji(sutehai)];
+	const content = `nostr:${nip19.npubEncode(event.pubkey)} sutehai? ${action} ${select}\n:${convertEmoji(select)}:`;
+	const tags = [...getTagsReply(event), ...getTagsEmoji(select)];
 	return [[content, tags]];
 };
 
