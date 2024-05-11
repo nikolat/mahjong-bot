@@ -140,7 +140,7 @@ export const getShantenNormal = (tehai: string): [number, string[]] => {
 	}
 	ret_composition_split = uniq(ret_composition_split);
 	//副露を追加
-	const furo_string: string = (hai_furo.length > 0 ? ',' + hai_furo.join(',') : '') + (hai_ankan.length > 0 ? ',' + hai_ankan.join(',') : '');
+	const furo_string: string = (hai_furo.length > 0 ? ',' + hai_furo.map(h => `<${h}>`).join(',') : '') + (hai_ankan.length > 0 ? ',' + hai_ankan.map(h => `<${h}>`).join(',') : '');
 	ret_composition = [];
 	for (const rcs of ret_composition_split) {
 		ret_composition.push(rcs.join(',') + furo_string);
