@@ -365,17 +365,17 @@ const getJifuHai = (nPlayer: number): string => {
 export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: string): [string, string[][]][] => {
 	const command = 'sutehai?';
 	const res: [string, string[][]][] = [];
+	if (dResponseNeed.get(event.pubkey) !== command) {
+		const content = `You are not required to send "${command}"`;
+		const tags = getTagsReply(event);
+		return [[content, tags]];
+	}
 	if (savedDoratsuchi !== undefined) {
 		res.push(savedDoratsuchi);
 		savedDoratsuchi = undefined;
 	}
 	const i = players.indexOf(event.pubkey);
 	currentPlayer = i;
-	if (dResponseNeed.get(event.pubkey) !== command) {
-		const content = `You are not required to send "${command}"`;
-		const tags = getTagsReply(event);
-		return [[content, tags]];
-	}
 	dResponseNeed.set(event.pubkey, '');
 	switch (action) {
 		case 'tsumo':
