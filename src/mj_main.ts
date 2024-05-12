@@ -174,7 +174,7 @@ export const startKyoku = (event: NostrEvent): [string, string[][]][] => {
 };
 
 const tehaiToEmoji = (tehai: string): string => {
-	return tehai.replaceAll(/[1-9][mpsz]/, (p) => `:${convertEmoji(p)}:`);
+	return tehai.replaceAll(/[1-9][mpsz]/g, (p) => `:${convertEmoji(p)}:`);
 };
 
 //東家を先頭にしてリーチ済の他家の現物を返す
