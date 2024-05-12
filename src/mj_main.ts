@@ -1061,11 +1061,11 @@ export const res_c_sutehai_call = (event: NostrEvent): [string, string[][]][] =>
 		action = 'richi';
 		select = dahai;
 	}
-	else if (ankanHai !== undefined) {
+	else if (ankanHai !== undefined && ankanHai !== '') {
 		action = 'ankan';
 		select = ankanHai;
 	}
-	else if (kakanHai !== undefined) {
+	else if (kakanHai !== undefined && kakanHai !== '') {
 		action = 'kakan';
 		select = kakanHai;
 	}
