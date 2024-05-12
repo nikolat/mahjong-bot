@@ -97,13 +97,13 @@ export const startKyoku = (event: NostrEvent): [string, string[][]][] => {
 	const res: [string, string[][]][] = [];
 	if (bafu >= 2) {//東場、南場
 		//gameend通知
-		const content_gameend = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY gameend ${[0, 1, 2, 3].map(i => `nostr:${players[i]} ${arScore[i]}`).join(' ')}`;
+		const content_gameend = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY gameend ${[0, 1, 2, 3].map(i => `nostr:${nip19.npubEncode(players[i])} ${arScore[i]}`).join(' ')}`;
 		const tags_gameend = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
 		res.push([content_gameend, tags_gameend]);
 		//点数表示
 		const content_result = [0, 1, 2, 3].map(i => `nostr:${nip19.npubEncode(players[i])} ${arScore[i]}`).join('\n');
 		const tags_result = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
-		res.push([content_gameend, tags_gameend]);
+		res.push([content_result, tags_result]);
 		reset_game();
 		return res;
 	}
@@ -287,6 +287,13 @@ const goNextKyoku = (
 	const res: [string, string[][]][] = [];
 	//通知
 	if (nAgariPlayer >= 0) {
+		if (arRichiJunme[nAgariPlayer] >= 0) {
+			for (let i = 0; i < arUradorahyouji.length; i++) {
+				const content_uradorahyouji = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY dora ${arUradorahyouji[i]}`;
+				const tags_uradorahyouji = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+				res.push([content_uradorahyouji, tags_uradorahyouji]);
+			}
+		}
 		const a = ['agari', `nostr:${nip19.npubEncode(players[nAgariPlayer])}`, nFu];
 		for (const [k, v] of dYakuAndHan) {
 			a.push(`${k},${v}`);
@@ -299,13 +306,6 @@ const goNextKyoku = (
 		const content_ryukyoku = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY ryukyoku`;
 		const tags_ryukyoku = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
 		res.push([content_ryukyoku, tags_ryukyoku]);
-	}
-	if (arRichiJunme[nAgariPlayer] >= 0) {
-		for (let i = 0; i < arUradorahyouji.length; i++) {
-			const content_uradorahyouji = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY dora ${arUradorahyouji[i]}`;
-			const tags_uradorahyouji = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
-			res.push([content_uradorahyouji, tags_uradorahyouji]);
-		}
 	}
 	for (let i = 0; i < 4; i++) {
 		let fugo = '';
