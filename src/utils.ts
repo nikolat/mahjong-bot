@@ -215,7 +215,7 @@ const getScoreAdd = (
 			for (let i = 0; i < 4; i++) {
 				if (nAgariPlayer === i) {
 					if (nAgariPlayer === nOyaIndex) {
-						const nShou = Math.ceil(score / 300) * 100;
+						const nShou = Math.floor(score / 300) * 100;
 						const nAmari = score % 300;
 						let nScore = nShou;
 						if (nAmari > 0)
@@ -224,12 +224,12 @@ const getScoreAdd = (
 						arScoreAdd[i] = nScore + (300 * nTsumibou) + (1000 * nKyotaku);
 					}
 					else {
-						const nShou1 = Math.ceil(score / 200) * 100;
+						const nShou1 = Math.floor(score / 200) * 100;
 						const nAmari1 = score % 200;
 						let nScore1 = nShou1;
 						if (nAmari1 > 0)
 							nScore1 += 100;
-						const nShou2 = Math.ceil(score / 400) * 100;
+						const nShou2 = Math.floor(score / 400) * 100;
 						const nAmari2 = score % 400;
 						let nScore2 = nShou2;
 						if (nAmari2 > 0)
@@ -240,7 +240,7 @@ const getScoreAdd = (
 				}
 				else {
 					if (nAgariPlayer === nOyaIndex) {
-						const nShou = Math.ceil(score / 300) * 100;
+						const nShou = Math.floor(score / 300) * 100;
 						const nAmari = score % 300;
 						let nScore = nShou;
 						if (nAmari > 0)
@@ -249,7 +249,7 @@ const getScoreAdd = (
 					}
 					else {
 						if (i === nOyaIndex) {
-							const nShou = Math.ceil(score / 200) * 100;
+							const nShou = Math.floor(score / 200) * 100;
 							const nAmari = score % 200;
 							let nScore = nShou;
 							if (nAmari > 0)
@@ -257,7 +257,7 @@ const getScoreAdd = (
 							arScoreAdd[i] = -1 * (nScore + (100 * nTsumibou));
 						}
 						else {
-							const nShou = Math.ceil(score / 400) * 100;
+							const nShou = Math.floor(score / 400) * 100;
 							const nAmari = score % 400;
 							let nScore = nShou;
 							if (nAmari > 0)
