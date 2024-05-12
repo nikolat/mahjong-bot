@@ -2,7 +2,7 @@ import { type NostrEvent, nip19 } from 'nostr-tools';
 import { getShanten } from './mjlib/mj_shanten';
 import { canRichi, countKantsu, getAnkanHaiBest, getChiMaterial, getChiMaterialBest, getKakanHai, getKakanHaiBest, naniwokiru, shouldDaiminkan, shouldPon, shouldRichi } from './mjlib/mj_ai';
 import { getScore } from './mjlib/mj_score';
-import { addHai, compareFn, getDoraFromDorahyouji, paikind, removeHai, stringToArrayWithFuro } from './mjlib/mj_common';
+import { addHai, compareFn, getDoraFromDorahyouji, paikind, removeHai, stringToArrayPlain, stringToArrayWithFuro } from './mjlib/mj_common';
 import { getMachi } from './mjlib/mj_machi';
 import { convertEmoji, getScoreAddWithPao, getTagsAirrep, getTagsEmoji, getTagsReply } from './utils';
 
@@ -174,10 +174,7 @@ export const startKyoku = (event: NostrEvent): [string, string[][]][] => {
 };
 
 const tehaiToEmoji = (tehai: string): string => {
-	const [hai_normal, hai_furo, hai_ankan] = stringToArrayWithFuro(tehai);
-	return hai_normal.map(pi => `:${convertEmoji(pi)}:`).join('')
-		+ ' ' + hai_furo.map(pi => '<' + stringToArrayWithFuro(pi)[0].map(p => `:${convertEmoji(p)}:`).join('') + '>').join('')
-		+ ' ' + hai_ankan.map(pi => '(' + stringToArrayWithFuro(pi)[0].map(p => `:${convertEmoji(p)}:`).join('') + ')').join('')
+	return tehai.replaceAll(/[1-9][mpsz]/, (p) => `:${convertEmoji(p)}:`);
 };
 
 //東家を先頭にしてリーチ済の他家の現物を返す
@@ -580,10 +577,13 @@ const sendNextTurn = (event: NostrEvent): [string, string[][]][] => {
 			}
 		}
 		content += '\n';
+		let emojiHai: string[] = [];
 		for (let i = 0; i < players.length; i++) {
-			content += `nostr:${nip19.npubEncode(players[i])} ${arScore[i] > 0 ? '' : '-'}${arScore[i]}\n`;
+			content += `nostr:${nip19.npubEncode(players[i])} ${arScore[i] > 0 ? '' : '-'}${arScore[i]}\n`
+				+ `${tehaiToEmoji(arTehai[i])}\n`;
+			emojiHai = [...emojiHai, ...stringToArrayPlain(arTehai[i])];
 		}
-		const tags = getTagsAirrep(event);
+		const tags = [...getTagsAirrep(event), ...getTagsEmoji(emojiHai.join(''))];
 		res.push([content, tags]);
 		return [...goNextKyoku(event, -1, 0, new Map<string, number>(), [], [], arTenpaiPlayerFlag), ...res];
 	}
