@@ -143,3 +143,153 @@ const awayuki_mahjong_emojis: any = {
 	'mahjong_green': 'https://awayuki.github.io/emoji/mahjong-green.png',
 	'mahjong_red': 'https://awayuki.github.io/emoji/mahjong-red.png',
 };
+
+export const getScoreAddWithPao = (
+	nAgariPlayer: number,
+	nFurikomiPlayer: number,
+	score: number,
+	nTsumibou: number,
+	nKyotaku: number,
+	arTenpaiPlayerFlag: number[],
+	nPaoPlayerDaisangen: number,
+	nPaoPlayerDaisushi: number,
+	countYakuman: number,
+	nOyaIndex: number,
+): number[] => {
+	let arScoreAdd = [0, 0, 0, 0];
+	let nPaoPlayer = -1;
+	let paoScore = 0;
+	if (nPaoPlayerDaisangen >= 0) {
+		nPaoPlayer = nPaoPlayerDaisangen;
+		paoScore = 32000;
+	}
+	else if (nPaoPlayerDaisushi >= 0) {
+		nPaoPlayer = nPaoPlayerDaisushi;
+		paoScore = 64000;
+	}
+	if (nAgariPlayer === nOyaIndex)
+		paoScore = 1.5 * paoScore;
+	if (nPaoPlayer >= 0) {
+		let arScoreAdd1;
+		let arScoreAdd2;
+		if (nFurikomiPlayer >= 0) {
+			arScoreAdd1 = getScoreAdd(nAgariPlayer, nFurikomiPlayer, score - (paoScore / 2), nTsumibou, nKyotaku, nOyaIndex, []);
+			arScoreAdd2 = getScoreAdd(nAgariPlayer, nPaoPlayer, paoScore / 2, 0, 0, nOyaIndex, []);
+		}
+		else {
+			if (countYakuman >= 2) {
+				arScoreAdd1 = getScoreAdd(nAgariPlayer, -1, score - paoScore, nTsumibou, nKyotaku, nOyaIndex, []);
+				arScoreAdd2 = getScoreAdd(nAgariPlayer, nPaoPlayer, paoScore, 0, 0, nOyaIndex, []);
+			}
+			else {
+				arScoreAdd1 = getScoreAdd(nAgariPlayer, nPaoPlayer, score, nTsumibou, nKyotaku, nOyaIndex, []);
+				arScoreAdd2 = [0, 0, 0, 0];
+			}
+		}
+		for (let i = 0; i < 4; i++) {
+			arScoreAdd[i] = arScoreAdd1[i] + arScoreAdd2[i];
+		}
+	}
+	else {
+		arScoreAdd = getScoreAdd(nAgariPlayer, nFurikomiPlayer, score, nTsumibou, nKyotaku, nOyaIndex, arTenpaiPlayerFlag);
+	}
+	return arScoreAdd;
+};
+
+const getScoreAdd = (
+	nAgariPlayer: number,
+	nFurikomiPlayer: number,
+	score: number,
+	nTsumibou: number,
+	nKyotaku: number,
+	nOyaIndex: number,
+	arTenpaiPlayerFlag: number[],
+): number[] => {
+	const arScoreAdd = [0, 0, 0, 0];
+	if (arTenpaiPlayerFlag.length === 0) {
+		if (nFurikomiPlayer >= 0) {
+			arScoreAdd[nFurikomiPlayer] = -1 * (score + (300 * nTsumibou));
+			arScoreAdd[nAgariPlayer] = score + (300 * nTsumibou) + (1000 * nKyotaku);
+		}
+		else {
+			for (let i = 0; i < 4; i++) {
+				if (nAgariPlayer === i) {
+					if (nAgariPlayer === nOyaIndex) {
+						const nShou = Math.round(score / 300) * 100;
+						const nAmari = score % 300;
+						let nScore = nShou;
+						if (nAmari > 0)
+							nScore += 100;
+						nScore = 3 * nScore;
+						arScoreAdd[i] = nScore + (300 * nTsumibou) + (1000 * nKyotaku);
+					}
+					else {
+						const nShou1 = Math.round(score / 200) * 100;
+						const nAmari1 = score % 200;
+						let nScore1 = nShou1;
+						if (nAmari1 > 0)
+							nScore1 += 100;
+						const nShou2 = Math.round(score / 400) * 100;
+						const nAmari2 = score % 400;
+						let nScore2 = nShou2;
+						if (nAmari2 > 0)
+							nScore2 += 100;
+						const nScore = nScore1 + (2 * nScore2);
+						arScoreAdd[i] = nScore + (300 * nTsumibou) + (1000 * nKyotaku);
+					}
+				}
+				else {
+					if (nAgariPlayer === nOyaIndex) {
+						const nShou = Math.round(score / 300) * 100;
+						const nAmari = score % 300;
+						let nScore = nShou;
+						if (nAmari > 0)
+							nScore += 100;
+						arScoreAdd[i] = -1 * (nScore + (100 * nTsumibou));
+					}
+					else {
+						if (i === nOyaIndex) {
+							const nShou = Math.round(score / 200) * 100;
+							const nAmari = score % 200;
+							let nScore = nShou;
+							if (nAmari > 0)
+								nScore += 100;
+							arScoreAdd[i] = -1 * (nScore + (100 * nTsumibou));
+						}
+						else {
+							const nShou = Math.round(score / 400) * 100;
+							const nAmari = score % 400;
+							let nScore = nShou;
+							if (nAmari > 0)
+								nScore += 100;
+							arScoreAdd[i] = -1 * (nScore + (100 * nTsumibou));
+						}
+					}
+				}
+			}
+		}
+	}
+	else {
+		let nTenpai = 0;
+		for (let i = 0; i < arTenpaiPlayerFlag.length; i++) {
+			nTenpai += arTenpaiPlayerFlag[i];
+		}
+		let plus;
+		let minus;
+		if (nTenpai === 0 || nTenpai === 4) {
+			plus = 0;
+			minus = 0;
+		}
+		else {
+			plus = 3000 / nTenpai;
+			minus = -3000 / (4 - nTenpai);
+		}
+		for (let i = 0; i < arTenpaiPlayerFlag.length; i++) {
+			if (arTenpaiPlayerFlag[i])
+				arScoreAdd[i] = plus;
+			else
+				arScoreAdd[i] = minus;
+		}
+	}
+	return arScoreAdd;
+};

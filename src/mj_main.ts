@@ -4,7 +4,7 @@ import { canRichi, countKantsu, getAnkanHaiBest, getChiMaterial, getChiMaterialB
 import { getScore } from './mjlib/mj_score';
 import { addHai, compareFn, getDoraFromDorahyouji, paikind, removeHai, stringToArrayWithFuro } from './mjlib/mj_common';
 import { getMachi } from './mjlib/mj_machi';
-import { convertEmoji, getTagsAirrep, getTagsEmoji, getTagsReply } from './utils';
+import { convertEmoji, getScoreAddWithPao, getTagsAirrep, getTagsEmoji, getTagsReply } from './utils';
 
 export const res_s_gamestart_call = (pubkey: string): void => {
 	reset_game();
@@ -192,26 +192,28 @@ const getVisiblePai = (p: number): string => {
 	return visiblePai + stringToArrayWithFuro(arTehai[p])[0].join('');
 };
 
-const getScoreView = (i: number, atarihai: string, isTsumo: boolean) => {
-	const richi: number = arRichiJunme[i] === 0 ? 2 : arRichiJunme[i] > 0 ? 1 : 0;
+const getScoreView = (nAgariPlayer: number, nFurikomiPlayer: number, atarihai: string, isTsumo: boolean) => {
+	const richi: number = arRichiJunme[nAgariPlayer] === 0 ? 2 : arRichiJunme[nAgariPlayer] > 0 ? 1 : 0;
 	const r = getScore(
-		arTehai[i],
+		arTehai[nAgariPlayer],
 		atarihai,
 		['1z', '2z'][bafu],
-		getJifuHai(i),
+		getJifuHai(nAgariPlayer),
 		getDoraFromDorahyouji(dorahyouji),
 		isTsumo,
 		richi,
-		arIppatsuChance[i],
+		arIppatsuChance[nAgariPlayer],
 		isRinshanChance && !isTsumo,
 		isRinshanChance && isTsumo,
 		arYama.length === nYamaIndex,
-		arChihouChance[i],
+		arChihouChance[nAgariPlayer],
 	);
 	let content = '';
+	let countYakuman = 0
 	if (r[2].size > 0) {
 		for (const [k, v] of r[2]) {
 			content += `${k} ${v >= 2 ? `${v}倍` : ''}役満\n`;
+			countYakuman += v;
 		}
 	}
 	else {
@@ -222,8 +224,29 @@ const getScoreView = (i: number, atarihai: string, isTsumo: boolean) => {
 		}
 		content	+= `${r[1]}符${han}翻\n`;
 	}
-	content	+= `${r[0]}点\n `
-		+ `nostr:${nip19.npubEncode(players[i])} +${r[0]}`;
+	const point: number[] = getScoreAddWithPao(
+		nAgariPlayer,
+		nFurikomiPlayer,
+		r[0],
+		tsumibou,
+		kyotaku,
+		[],
+		-1,
+		-1,
+		countYakuman,
+		oyaIndex,
+	);
+	content	+= `${r[0]}点\n `;
+	for (let i = 0; i < players.length; i++) {
+		if (point[i] !== 0) {
+			content += `nostr:${nip19.npubEncode(players[i])} ${point[i] < 0 ? '+' : '-'}${point[i]}\n`;
+			arScore[i] += point[i];
+		}
+	}
+	content += '\n';
+	for (let i = 0; i < players.length; i++) {
+		content += `nostr:${nip19.npubEncode(players[i])} ${arScore[i] < 0 ? '' : '-'}${arScore[i]}\n`;
+	}
 	return content;
 };
 
@@ -261,7 +284,7 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
 				const content_say = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY say nostr:${nip19.npubEncode(players[i])} tsumo`;
 				const tags_say = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
 				res.push([content_say, tags_say]);
-				const content = getScoreView(i, savedTsumo, true) + '\n'
+				const content = getScoreView(i, -1, savedTsumo, true) + '\n'
 					+ `${tehaiToEmoji(arTehai[i])} :${convertEmoji(savedTsumo)}:`;
 				const tags = [...getTagsAirrep(event), ...getTagsEmoji(addHai(arTehai[i], savedTsumo))];
 				res.push([content, tags]);
@@ -453,7 +476,18 @@ const setSutehai = (sute: string, nPlayer: number) => {
 const sendNextTurn = (event: NostrEvent): [string, string[][]][] => {
 	const res: [string, string[][]][] = [];
 	if (arYama[nYamaIndex] === undefined) {
-		const content = 'ryukyoku';
+		const point: number[] = getScoreAddWithPao(-1, -1, 0, tsumibou, kyotaku, arTehai.map(tehai => getShanten(tehai)[0] === 0 ? 1 : 0), -1, -1, 0, oyaIndex);
+		let content = 'ryukyoku 荒牌平局\n';
+		for (let i = 0; i < players.length; i++) {
+			if (point[i] !== 0) {
+				content += `nostr:${nip19.npubEncode(players[i])} ${point[i] < 0 ? '+' : '-'}${point[i]}\n`;
+				arScore[i] += point[i];
+			}
+		}
+		content += '\n';
+		for (let i = 0; i < players.length; i++) {
+			content += `nostr:${nip19.npubEncode(players[i])} ${arScore[i] < 0 ? '' : '-'}${arScore[i]}\n`;
+		}
 		const tags = getTagsAirrep(event);
 		return [[content, tags]];
 	}
@@ -584,7 +618,7 @@ export const res_s_naku_call = (event: NostrEvent, action: string, pai1: string,
 			const tags = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
 			res.push([content, tags]);
 		}
-		const content = 'ryukyoku\n三家和';
+		const content = 'ryukyoku 三家和';
 		const tags = getTagsAirrep(event);
 		res.push([content, tags]);
 		return res;
@@ -620,7 +654,7 @@ const execNaku = (event: NostrEvent, pubkey: string, actions: string[]): [string
 					res.push(savedDoratsuchi);
 					savedDoratsuchi = undefined;
 				}
-				const content = getScoreView(i, savedSutehai, false) + '\n'
+				const content = getScoreView(i, currentPlayer, savedSutehai, false) + '\n'
 					+ `${tehaiToEmoji(arTehai[i])} :${convertEmoji(savedSutehai)}:`;
 				const tags = [...getTagsAirrep(event), ...getTagsEmoji(addHai(arTehai[i], savedSutehai))];
 				res.push([content, tags]);
