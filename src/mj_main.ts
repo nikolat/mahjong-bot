@@ -326,6 +326,9 @@ const goNextKyoku = (
 	const tags_kyokuend = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
 	res.push([content_kyokuend, tags_kyokuend]);
 	//連荘判定
+	if (nAgariPlayer >= 0) {
+		kyotaku = 0;
+	}
 	if (nAgariPlayer === oyaIndex) {
 		tsumibou++;
 	}
