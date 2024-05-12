@@ -575,7 +575,7 @@ const sendNextTurn = (event: NostrEvent): [string, string[][]][] => {
 		let content = 'ryukyoku 荒牌平局\n';
 		for (let i = 0; i < players.length; i++) {
 			if (point[i] !== 0) {
-				content += `nostr:${nip19.npubEncode(players[i])} ${point[i] > 0 ? '+' : '-'}${point[i]}\n`;
+				content += `nostr:${nip19.npubEncode(players[i])} ${point[i] > 0 ? '+' : ''}${point[i]}\n`;
 				arScore[i] += point[i];
 			}
 		}
