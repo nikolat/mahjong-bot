@@ -290,7 +290,7 @@ const goNextKyoku = (
 	const res: [string, string[][]][] = [];
 	//通知
 	if (nAgariPlayer >= 0) {
-		const a = ['agari', `nostr:${players[nAgariPlayer]}`, nFu];
+		const a = ['agari', `nostr:${nip19.npubEncode(players[nAgariPlayer])}`, nFu];
 		for (const [k, v] of dYakuAndHan) {
 			a.push(`${k},${v}`);
 		}
@@ -317,7 +317,7 @@ const goNextKyoku = (
 		else if (arScoreAdd[i] < 0)
 			fugo = '-';
 		if (fugo !== '') {
-			const content_point = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY point nostr:${players[i]} ${fugo} ${Math.abs(arScoreAdd[i])}`;
+			const content_point = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY point nostr:${nip19.npubEncode(players[i])} ${fugo} ${Math.abs(arScoreAdd[i])}`;
 			const tags_point = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
 			res.push([content_point, tags_point]);
 		}
