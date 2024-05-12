@@ -239,7 +239,7 @@ const getScoreView = (nAgariPlayer: number, nFurikomiPlayer: number, atarihai: s
 	content	+= `${r[0]}点\n `;
 	for (let i = 0; i < players.length; i++) {
 		if (point[i] !== 0) {
-			content += `nostr:${nip19.npubEncode(players[i])} ${point[i] > 0 ? '+' : '-'}${point[i]}\n`;
+			content += `nostr:${nip19.npubEncode(players[i])} ${point[i] > 0 ? '+' : ''}${point[i]}\n`;
 			arScore[i] += point[i];
 		}
 	}
