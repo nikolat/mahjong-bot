@@ -239,13 +239,13 @@ const getScoreView = (nAgariPlayer: number, nFurikomiPlayer: number, atarihai: s
 	content	+= `${r[0]}点\n `;
 	for (let i = 0; i < players.length; i++) {
 		if (point[i] !== 0) {
-			content += `nostr:${nip19.npubEncode(players[i])} ${point[i] < 0 ? '+' : '-'}${point[i]}\n`;
+			content += `nostr:${nip19.npubEncode(players[i])} ${point[i] > 0 ? '+' : '-'}${point[i]}\n`;
 			arScore[i] += point[i];
 		}
 	}
 	content += '\n';
 	for (let i = 0; i < players.length; i++) {
-		content += `nostr:${nip19.npubEncode(players[i])} ${arScore[i] < 0 ? '' : '-'}${arScore[i]}\n`;
+		content += `nostr:${nip19.npubEncode(players[i])} ${arScore[i]}\n`;
 	}
 	return content;
 };
