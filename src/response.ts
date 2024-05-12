@@ -1,6 +1,6 @@
 import { type EventTemplate, type VerifiedEvent, type NostrEvent, SimplePool, nip19 } from 'nostr-tools';
 import { Mode, Signer, getTagsAirrep, getTagsReply } from './utils';
-import { mahjongGameStart, res_c_naku_call, res_c_sutehai_call, res_s_debug_call, res_s_gamestart_call, res_s_join_call, res_s_naku_call, res_s_reset_call, res_s_sutehai_call } from './mj_main';
+import { mahjongGameStart, res_c_naku_call, res_c_sutehai_call, res_s_debug_call, res_s_gamestart_call, res_s_join_call, res_s_naku_call, res_s_reset_call, res_s_sutehai_call, startKyoku } from './mj_main';
 
 export const getResponseEvent = async (requestEvent: NostrEvent, signer: Signer, mode: Mode, pool: SimplePool): Promise<VerifiedEvent[] | null> => {
 	if (requestEvent.pubkey === signer.getPublicKey()) {
@@ -58,6 +58,7 @@ const getResmap = (mode: Mode): [RegExp, (event: NostrEvent, mode: Mode, regstr:
 		[/ping$/, res_ping],
 		[/^(nostr:npub1\w{58}\s+)?gamestart/, res_s_gamestart],
 		[/join$/, res_s_join],
+		[/next$/, res_s_next],
 		[/reset$/, res_s_reset],
 		[/debug\s+(([1-9][mpsz])+)$/, res_s_debug],
 		[/sutehai\?\s(sutehai|ankan|kakan|richi|tsumo)\s?([1-9][mpsz])?/, res_s_sutehai],
@@ -125,6 +126,10 @@ const res_s_join = (event: NostrEvent): [string, string[][]][] | null => {
 		return mahjongGameStart(event);
 	}
 	return null;
+};
+
+const res_s_next = (event: NostrEvent): [string, string[][]][] | null => {
+	return startKyoku(event);
 };
 
 const res_s_reset = (event: NostrEvent): [string, string[][]][] | null => {

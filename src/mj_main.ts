@@ -93,8 +93,20 @@ let reservedTenpai: Map<string, string>;
 let dResponseNeed: Map<string, string>;
 const arBafu = ['東', '南'];
 
-const startKyoku = (event: NostrEvent): [string, string[][]][] => {
+export const startKyoku = (event: NostrEvent): [string, string[][]][] => {
 	const res: [string, string[][]][] = [];
+	if (bafu >= 2) {//東場、南場
+		//gameend通知
+		const content_gameend = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY gameend ${[0, 1, 2, 3].map(i => `nostr:${players[i]} ${arScore[i]}`).join(' ')}`;
+		const tags_gameend = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+		res.push([content_gameend, tags_gameend]);
+		//点数表示
+		const content_result = [0, 1, 2, 3].map(i => `nostr:${nip19.npubEncode(players[i])} ${arScore[i]}`).join('\n');
+		const tags_result = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+		res.push([content_gameend, tags_gameend]);
+		reset_game();
+		return res;
+	}
 	if (debugYama.length > 0) {
 		arYama = debugYama;
 		debugYama = [];
@@ -192,8 +204,21 @@ const getVisiblePai = (p: number): string => {
 	return visiblePai + stringToArrayWithFuro(arTehai[p])[0].join('');
 };
 
-const getScoreView = (nAgariPlayer: number, nFurikomiPlayer: number, atarihai: string, isTsumo: boolean) => {
+const getScoreView = (
+	event: NostrEvent,
+	nAgariPlayer: number,
+	nFurikomiPlayer: number,
+	atarihai: string,
+	isTsumo: boolean,
+): [string, string[][]][] => {
 	const richi: number = arRichiJunme[nAgariPlayer] === 0 ? 2 : arRichiJunme[nAgariPlayer] > 0 ? 1 : 0;
+	const arUradorahyouji: string[] = [];
+	for (let i = 0; i < stringToArrayWithFuro(dorahyouji)[0].length; i++) {
+		arUradorahyouji.push(arYama[59 + i]);
+	}
+	if (richi > 0) {
+		dorahyouji += arUradorahyouji.join('');
+	}
 	const r = getScore(
 		arTehai[nAgariPlayer],
 		atarihai,
@@ -247,7 +272,78 @@ const getScoreView = (nAgariPlayer: number, nFurikomiPlayer: number, atarihai: s
 	for (let i = 0; i < players.length; i++) {
 		content += `nostr:${nip19.npubEncode(players[i])} ${arScore[i]}\n`;
 	}
-	return content;
+	const content_view = content + '\n'
+		+ `${tehaiToEmoji(arTehai[nAgariPlayer])} :${convertEmoji(savedSutehai)}:`;
+	const tags_view = [...getTagsAirrep(event), ...getTagsEmoji(addHai(arTehai[nAgariPlayer], savedSutehai))];
+	return [[content_view, tags_view], ...goNextKyoku(event, nAgariPlayer, r[1], r[3], arUradorahyouji, point, [0, 0, 0, 0])];
+};
+
+const goNextKyoku = (
+	event: NostrEvent,
+	nAgariPlayer: number,
+	nFu: number,
+	dYakuAndHan: Map<string, number>,
+	arUradorahyouji: string[],
+	arScoreAdd: number[],
+	arTenpaiPlayerFlag: number[],
+): [string, string[][]][] => {
+	const res: [string, string[][]][] = [];
+	//通知
+	if (nAgariPlayer >= 0) {
+		const a = ['agari', `nostr:${players[nAgariPlayer]}`, nFu];
+		for (const [k, v] of dYakuAndHan) {
+			a.push(`${k},${v}`);
+		}
+		const content_agari = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY ${a.join(' ')}`;
+		const tags_agari = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+		res.push([content_agari, tags_agari]);
+	}
+	else {
+		const content_ryukyoku = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY ryukyoku`;
+		const tags_ryukyoku = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+		res.push([content_ryukyoku, tags_ryukyoku]);
+	}
+	if (arRichiJunme[nAgariPlayer] >= 0) {
+		for (let i = 0; i < arUradorahyouji.length; i++) {
+			const content_uradorahyouji = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY dora ${arUradorahyouji[i]}`;
+			const tags_uradorahyouji = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+			res.push([content_uradorahyouji, tags_uradorahyouji]);
+		}
+	}
+	for (let i = 0; i < 4; i++) {
+		let fugo = '';
+		if (arScoreAdd[i] > 0)
+			fugo = '+';
+		else if (arScoreAdd[i] < 0)
+			fugo = '-';
+		if (fugo !== '') {
+			const content_point = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY point nostr:${players[i]} ${fugo} ${Math.abs(arScoreAdd[i])}`;
+			const tags_point = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+			res.push([content_point, tags_point]);
+		}
+	}
+	const content_kyokuend = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY kyokuend`;
+	const tags_kyokuend = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+	res.push([content_kyokuend, tags_kyokuend]);
+	//連荘判定
+	if (nAgariPlayer === oyaIndex) {
+		tsumibou++;
+	}
+	else {
+		if (nAgariPlayer >= 0)
+			tsumibou = 0;
+		else
+			tsumibou++;
+		if (!arTenpaiPlayerFlag[oyaIndex]) {
+			kyoku++;
+			if (kyoku == 5) {
+				kyoku = 1;
+				bafu++;
+			}
+			oyaIndex = (oyaIndex + 1) % 4;
+		}
+	}
+	return res;
 };
 
 const getJifuHai = (nPlayer: number): string => {
@@ -284,12 +380,7 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
 				const content_say = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY say nostr:${nip19.npubEncode(players[i])} tsumo`;
 				const tags_say = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
 				res.push([content_say, tags_say]);
-				const content = getScoreView(i, -1, savedTsumo, true) + '\n'
-					+ `${tehaiToEmoji(arTehai[i])} :${convertEmoji(savedTsumo)}:`;
-				const tags = [...getTagsAirrep(event), ...getTagsEmoji(addHai(arTehai[i], savedTsumo))];
-				res.push([content, tags]);
-				reset_game();
-				return res;
+				return [...res, ...getScoreView(event, i, -1, savedTsumo, true)];
 			}
 			else {
 				const content = 'You cannot tsumo.';
@@ -476,20 +567,22 @@ const setSutehai = (sute: string, nPlayer: number) => {
 const sendNextTurn = (event: NostrEvent): [string, string[][]][] => {
 	const res: [string, string[][]][] = [];
 	if (arYama[nYamaIndex] === undefined) {
-		const point: number[] = getScoreAddWithPao(-1, -1, 0, tsumibou, kyotaku, arTehai.map(tehai => getShanten(tehai)[0] === 0 ? 1 : 0), -1, -1, 0, oyaIndex);
+		const arTenpaiPlayerFlag = arTehai.map(tehai => getShanten(tehai)[0] === 0 ? 1 : 0);
+		const point: number[] = getScoreAddWithPao(-1, -1, 0, tsumibou, kyotaku, arTenpaiPlayerFlag, -1, -1, 0, oyaIndex);
 		let content = 'ryukyoku 荒牌平局\n';
 		for (let i = 0; i < players.length; i++) {
 			if (point[i] !== 0) {
-				content += `nostr:${nip19.npubEncode(players[i])} ${point[i] < 0 ? '+' : '-'}${point[i]}\n`;
+				content += `nostr:${nip19.npubEncode(players[i])} ${point[i] > 0 ? '+' : '-'}${point[i]}\n`;
 				arScore[i] += point[i];
 			}
 		}
 		content += '\n';
 		for (let i = 0; i < players.length; i++) {
-			content += `nostr:${nip19.npubEncode(players[i])} ${arScore[i] < 0 ? '' : '-'}${arScore[i]}\n`;
+			content += `nostr:${nip19.npubEncode(players[i])} ${arScore[i] > 0 ? '' : '-'}${arScore[i]}\n`;
 		}
 		const tags = getTagsAirrep(event);
-		return [[content, tags]];
+		res.push([content, tags]);
+		return [...goNextKyoku(event, -1, 0, new Map<string, number>(), [], [], arTenpaiPlayerFlag), ...res];
 	}
 	setKyotaku(currentPlayer);
 	savedTsumo = arYama[nYamaIndex++];
@@ -621,7 +714,8 @@ export const res_s_naku_call = (event: NostrEvent, action: string, pai1: string,
 		const content = 'ryukyoku 三家和';
 		const tags = getTagsAirrep(event);
 		res.push([content, tags]);
-		return res;
+		const arTenpaiPlayerFlag = arTehai.map(tehai => getShanten(tehai)[0] === 0 ? 1 : 0);
+		return [...goNextKyoku(event, -1, 0, new Map<string, number>(), [], [], arTenpaiPlayerFlag), ...res];
 	}
 	for (const a of ['ron', 'pon', 'kan', 'chi', 'no']) {
 		for (const [k, v] of reservedNaku) {
@@ -654,12 +748,7 @@ const execNaku = (event: NostrEvent, pubkey: string, actions: string[]): [string
 					res.push(savedDoratsuchi);
 					savedDoratsuchi = undefined;
 				}
-				const content = getScoreView(i, currentPlayer, savedSutehai, false) + '\n'
-					+ `${tehaiToEmoji(arTehai[i])} :${convertEmoji(savedSutehai)}:`;
-				const tags = [...getTagsAirrep(event), ...getTagsEmoji(addHai(arTehai[i], savedSutehai))];
-				res.push([content, tags]);
-				reset_game();
-				return res;
+				return [...res, ...getScoreView(event, i, currentPlayer, savedSutehai, false)];
 			}
 			else {
 				const content = 'You cannot ron.';
@@ -1037,6 +1126,12 @@ export const res_c_naku_call = (event: NostrEvent, action: string[]): [string, s
 
 const reset_game = () => {
 	players.length = 0;
+	arScore = [25000, 25000, 25000, 25000];
+	tsumibou = 0;
+	kyotaku = 0;
+	bafu = 0;
+	kyoku = 1;
+	oyaIndex = 0;
 	arYama = [];
 	arKawa = [[], [], [], []];
 	arFuritenCheckRichi = [[], [], [], []];
