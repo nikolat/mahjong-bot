@@ -273,9 +273,9 @@ const getScoreView = (
 		content += `nostr:${nip19.npubEncode(players[i])} ${arScore[i]}\n`;
 	}
 	const content_view = content + '\n'
-		+ `${tehaiToEmoji(arTehai[nAgariPlayer])} :${convertEmoji(savedSutehai)}:`;
-	const tags_view = [...getTagsAirrep(event), ...getTagsEmoji(addHai(arTehai[nAgariPlayer], savedSutehai))];
-	return [[content_view, tags_view], ...goNextKyoku(event, nAgariPlayer, r[1], r[3], arUradorahyouji, point, [0, 0, 0, 0])];
+		+ `${tehaiToEmoji(arTehai[nAgariPlayer])} :${convertEmoji(atarihai)}:`;
+	const tags_view = [...getTagsAirrep(event), ...getTagsEmoji(addHai(arTehai[nAgariPlayer], atarihai))];
+	return [...goNextKyoku(event, nAgariPlayer, r[1], r[3], arUradorahyouji, point, [0, 0, 0, 0]), [content_view, tags_view]];
 };
 
 const goNextKyoku = (
