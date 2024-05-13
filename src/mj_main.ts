@@ -42,7 +42,7 @@ export const res_s_status_call = (event: NostrEvent): [string, string[][]][] => 
 		a.push(`nostr:${nip19.npubEncode(players[i])} ${dSeki.get(players[i])} ${arScore[i]}点`);
 		a.push(tehaiToEmoji(arTehai[i]));
 		a.push(tehaiToEmoji(arKawa[i].join('')));
-		emojiHai = [...emojiHai, ...stringToArrayPlain(arTehai[i])];
+		emojiHai = [...emojiHai, ...stringToArrayPlain(arTehai[i]), ...arKawa[i]];
 	}
 	const content = a.join('\n');
 	const tags = [...getTagsAirrep(event), ...getTagsEmoji(emojiHai.join(''))];
