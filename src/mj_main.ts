@@ -396,7 +396,7 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
 			}
 			break;
 		case 'richi':
-			if (canRichi(addHai(arTehai[i], savedTsumo), savedTsumo, arRichiJunme[i] >= 0, arYama.length - nYamaIndex)) {
+			if (canRichi(arTehai[i], savedTsumo, arRichiJunme[i] >= 0, arYama.length - nYamaIndex, pai)) {
 				arRichiJunme[i] = arKawa[i].length;
 				const content = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY say nostr:${nip19.npubEncode(players[i])} richi`;
 				const tags = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];

@@ -244,8 +244,13 @@ export const canRichi = (
 	strTsumo: string,
 	isRichi: boolean,
 	nokori: number,
+	sutehai?: string,
 ): boolean => {
-	const shanten = getShanten(addHai(tehai, strTsumo))[0];
+	let tehai2 = addHai(tehai, strTsumo);
+	if (sutehai !== undefined) {
+		tehai2 = removeHai(tehai2, sutehai);
+	}
+	const shanten = getShanten(tehai2)[0];
 	if (!tehai.includes('<') && shanten === 0 && !isRichi && nokori >= 4) {
 		return true;
 	}
