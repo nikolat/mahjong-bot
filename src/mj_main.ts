@@ -152,7 +152,7 @@ export const startKyoku = (event: NostrEvent): [string, string[][]][] => {
 		res.push([content, tags]);
 	}
 	//haipai通知
-	for (let i = 0; i <= 3; i++) {
+	for (let i = 0; i < players.length; i++) {
 		const content = `nostr:${nip19.npubEncode(players[i])} NOTIFY haipai\n${tehaiToEmoji(arTehai[i])}`;
 		const tags = [...getTagsAirrep(event), ['p', players[i], ''], ...getTagsEmoji(arTehai[i])];
 		res.push([content, tags]);
@@ -306,6 +306,12 @@ const goNextKyoku = (
 		const content_ryukyoku = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY ryukyoku`;
 		const tags_ryukyoku = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
 		res.push([content_ryukyoku, tags_ryukyoku]);
+		for (let i = 0; i < 4; i++) {
+			const say = arTenpaiPlayerFlag[i] !== 0 ? 'tenpai' : 'noten';
+			const content_tenpai = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY say nostr:${nip19.npubEncode(players[i])} ${say}`;
+			const tags_tenpai = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+			res.push([content_tenpai, tags_tenpai]);
+		}
 	}
 	for (let i = 0; i < 4; i++) {
 		let fugo = '';
@@ -579,7 +585,7 @@ const sendNextTurn = (event: NostrEvent): [string, string[][]][] => {
 		content += '\n';
 		let emojiHai: string[] = [];
 		for (let i = 0; i < players.length; i++) {
-			content += `nostr:${nip19.npubEncode(players[i])} ${arScore[i] > 0 ? '' : '-'}${arScore[i]}\n`
+			content += `nostr:${nip19.npubEncode(players[i])} ${arScore[i]}\n`
 				+ `${tehaiToEmoji(arTehai[i])}\n`;
 			emojiHai = [...emojiHai, ...stringToArrayPlain(arTehai[i])];
 		}
