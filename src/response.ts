@@ -154,7 +154,7 @@ const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, 
 	}
 	const action = match[1] ?? 'sutehai';
 	const pai = match[2];
-	if (action !== 'tsumo' && !!pai)
+	if (action !== 'tsumo' && !pai)
 		return [['usage: sutehai? sutehai <pi>', getTagsReply(event)]];
 	return res_s_sutehai_call(event, action, pai);
 };
