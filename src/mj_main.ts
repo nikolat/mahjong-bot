@@ -391,8 +391,7 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
 			else {
 				const content = 'You cannot tsumo.';
 				const tags = getTagsReply(event);
-				res.push([content, tags]);
-				savedSutehai = savedTsumo;
+				return [[content, tags]];
 			}
 			break;
 		case 'richi':
@@ -404,10 +403,9 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
 				savedSutehai = pai;
 			}
 			else {
-				const content = 'You cannot richi.';
+				const content = `You cannot richi ${pai}.`;
 				const tags = getTagsReply(event);
-				res.push([content, tags]);
-				savedSutehai = savedTsumo;
+				return [[content, tags]];
 			}
 			break;
 		case 'sutehai':
@@ -418,8 +416,7 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
 			else {
 				const content = `You cannot sutehai ${pai} .`;
 				const tags = getTagsReply(event);
-				res.push([content, tags]);
-				savedSutehai = savedTsumo;
+				return [[content, tags]];
 			}
 			break;
 		case 'ankan':
@@ -458,10 +455,8 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
 			else {
 				const content = `You cannot ankan ${pai} .`;
 				const tags = getTagsReply(event);
-				res.push([content, tags]);
-				savedSutehai = savedTsumo;
+				return [[content, tags]];
 			}
-			break;
 		case 'kakan':
 			if (canKakan(i, savedTsumo, pai)) {
 				arTehai[i] = addHai(arTehai[i], savedTsumo);
@@ -519,10 +514,9 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
 				}
 			}
 			else {
-				const content = `You cannot ankan ${pai} .`;
+				const content = `You cannot kakan ${pai} .`;
 				const tags = getTagsReply(event);
-				res.push([content, tags]);
-				savedSutehai = savedTsumo;
+				return [[content, tags]];
 			}
 			break;
 		default:
