@@ -62,7 +62,8 @@ const getResmap = (mode: Mode): [RegExp, (event: NostrEvent, mode: Mode, regstr:
 		[/reset$/, res_s_reset],
 		[/debug\s+(([1-9][mpsz])+)$/, res_s_debug],
 		[/sutehai\?\s(sutehai|ankan|kakan|richi|tsumo)\s?([1-9][mpsz])?/, res_s_sutehai],
-		[/^(sutehai|ankan|kakan|richi|tsumo)?([1-9][mpsz])?/, res_s_sutehai],
+		[/^(tsumo)$/, res_s_sutehai],
+		[/^(sutehai|ankan|kakan|richi)\s?([1-9][mpsz])/, res_s_sutehai],
 		[/naku\?\s(no|ron|kan|pon|chi)\s?([1-9][mpsz])?\s?([1-9][mpsz])?/, res_s_naku],
 		[/^(no|ron|kan|pon|chi)\s?([1-9][mpsz])?\s?([1-9][mpsz])?/, res_s_naku],
 	];
