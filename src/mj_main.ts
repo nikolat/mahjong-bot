@@ -113,7 +113,7 @@ let savedKakan: [string, string[][]][] | undefined;
 let savedSutehai: string;
 let currentPlayer: number;
 let reservedNaku = new Map<string, string[]>();
-let reservedTenpai: Map<string, string>;
+//let reservedTenpai: Map<string, string>;
 let dResponseNeed: Map<string, string>;
 const arBafu = ['東', '南'];
 
@@ -162,7 +162,7 @@ export const startKyoku = (event: NostrEvent): [string, string[][]][] => {
 	savedSutehai = '';
 	currentPlayer = oyaIndex;
 	reservedNaku = new Map<string, string[]>();
-	reservedTenpai = new Map<string, string>();
+//	reservedTenpai = new Map<string, string>();
 	dResponseNeed = new Map<string, string>(players.map(p => [p, '']));
 	let s: string = '';
 	//kyokustart通知
@@ -1156,6 +1156,7 @@ export const res_c_naku_call = (event: NostrEvent, action: string[]): [string, s
 
 const reset_game = () => {
 	players.length = 0;
+	debugYama = [];
 	arScore = [25000, 25000, 25000, 25000];
 	tsumibou = 0;
 	kyotaku = 0;
