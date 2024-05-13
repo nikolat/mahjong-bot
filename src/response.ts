@@ -62,7 +62,7 @@ const getResmap = (mode: Mode): [RegExp, (event: NostrEvent, mode: Mode, regstr:
 		[/reset$/, res_s_reset],
 		[/debug\s+(([1-9][mpsz])+)$/, res_s_debug],
 		[/sutehai\?\s(sutehai|ankan|kakan|richi|tsumo)\s?([1-9][mpsz])?/, res_s_sutehai],
-		[/^(sutehai\?)?([1-9][mpsz])/, res_s_sutehai],
+		[/^(sutehai|ankan|kakan|richi|tsumo)?([1-9][mpsz])?/, res_s_sutehai],
 		[/naku\?\s(no|ron|kan|pon|chi)\s?([1-9][mpsz])?\s?([1-9][mpsz])?/, res_s_naku],
 		[/^(no|ron|kan|pon|chi)\s?([1-9][mpsz])?\s?([1-9][mpsz])?/, res_s_naku],
 	];
@@ -154,6 +154,8 @@ const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, 
 	}
 	const action = match[1] ?? 'sutehai';
 	const pai = match[2];
+	if (action !== 'tsumo' && !!pai)
+		return [['usage: sutehai? sutehai <pi>', getTagsReply(event)]];
 	return res_s_sutehai_call(event, action, pai);
 };
 
