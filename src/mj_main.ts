@@ -522,6 +522,9 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
 		default:
 			throw new TypeError(`action ${action} is not supported`);
 	}
+	const content_sutehai = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY sutehai nostr:${nip19.npubEncode(players[i])} ${savedSutehai}`;
+	const tags_sutehai = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+	res.push([content_sutehai, tags_sutehai]);
 	isRinshanChance = false;
 	setSutehai(savedSutehai, i);
 	if (savedTsumo)
