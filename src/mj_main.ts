@@ -32,7 +32,7 @@ export const res_s_debug_call = (yama: string): void => {
 
 export const res_s_status_call = (event: NostrEvent): [string, string[][]][] => {
 	const a: string[] = [
-		`${arBafu[bafu]}${kyoku}局 ${tsumibou}本場 供託${kyoku*1000}点`,
+		`${arBafu[bafu]}${kyoku}局 ${tsumibou}本場 供託${kyotaku*1000}点`,
 		`ドラ表示牌 ${dorahyouji}`,
 		'',
 	];
@@ -41,7 +41,7 @@ export const res_s_status_call = (event: NostrEvent): [string, string[][]][] => 
 	for (let i = 0; i < players.length; i++) {
 		a.push(`nostr:${nip19.npubEncode(players[i])} ${dSeki.get(players[i])} ${arScore[i]}点`);
 		a.push(tehaiToEmoji(arTehai[i]));
-		a.push(arKawa[i].join(''));
+		a.push(tehaiToEmoji(arKawa[i].join('')));
 		emojiHai = [...emojiHai, ...stringToArrayPlain(arTehai[i])];
 	}
 	const content = a.join('\n');
