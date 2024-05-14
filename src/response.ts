@@ -56,6 +56,7 @@ const isAllowedToPost = (event: NostrEvent) => {
 const getResmap = (mode: Mode): [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp, signer: Signer, pool: SimplePool) => [string, string[][]][] | null | Promise<null>][] => {
 	const resmapServer: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => [string, string[][]][] | null][] = [
 		[/ping$/, res_ping],
+		[/help$/, res_help],
 		[/^(nostr:npub1\w{58}\s+)?gamestart/, res_s_gamestart],
 		[/join$/, res_s_join],
 		[/next$/, res_s_next],
@@ -106,6 +107,32 @@ const mode_select = async (event: NostrEvent, mode: Mode, signer: Signer, pool: 
 
 const res_ping = (event: NostrEvent): [string, string[][]][] => {
 	return [['pong', getTagsReply(event)]];
+};
+
+const res_help = (event: NostrEvent): [string, string[][]][] => {
+	const content = [
+		'【麻雀サーバーbot(私)の使い方】',
+		'ping: pongと返します',
+		'gamestart: ゲーム開始 メンバーを4人まで募集します',
+		'join: ゲームに参加 募集中のゲームに参加します',
+		'next: 次の局に移ります',
+		'reset: データをクリアします',
+		'status: 現在の場の状況を表示します',
+		'sutehai? (sutehai|ankan|kakan|richi|tsumo) <牌>: 捨て牌を求められたコマンドに応答します',
+		'(例1: sutehai? sutehai 1p, 例2: sutehai? richi 7z, 例3: sutehai? tsumo)',
+		'naku? (no|ron|kan|pon|chi) <牌1> <牌2>: 鳴く判断を求められたコマンドに応答します',
+		'(例1: naku? no, 例2: naku? pon, 例3: naku? chi 1m 3m)',
+		'(sutehai? および naku? は省略可能)(sutehaiも省略可能で単に "7z" で捨て牌となる)',
+		'help: このヘルプを表示します',
+		'【麻雀クライアントbotの使い方】',
+		'gamestart: 麻雀サーバーbotに "gamestart" とメンションします',
+		'join: 麻雀サーバーbotに "join" とメンションします',
+		'nostr:npub1rnrnclxznfkqqu8nnpt0mwp4hj0xe005mnwjqlafaluv7n2kn80sy53aq2',
+		'nostr:npub1chunacswmcejn8ge95vzl22a2g6pd4nfchygslnt9gj9dshqcvqq5amrlj',
+		'nostr:npub1whanysx54uf9tgjfeueljg3498kyru3rhwxajwuzh0nw0x0eujss9tlcjh',
+		'nostr:npub18ee7ggjpp4uf77aurecqhtfpz5y0j95pd9hadrdsxt5we3pysnnqe8k224',
+	];
+	return [[content.join('\n'), getTagsReply(event)]];
 };
 
 const res_s_gamestart = (event: NostrEvent): [string, string[][]][] | null => {
