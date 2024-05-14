@@ -611,12 +611,12 @@ const sendNextTurn = (event: NostrEvent): [string, string[][]][] => {
 					let content = 'ryukyoku 流し満貫\n';
 					content += `nostr:${nip19.npubEncode(players[i])}\n`
 						+ `${tehaiToEmoji(arTehai[i])}\n`
-						+ `${tehaiToEmoji(arKawa[i].join(''))}\n`;
+						+ `${tehaiToEmoji(arKawa[i].join(''))}\n\n`;
 					for (let i = 0; i < players.length; i++) {
 						content += `nostr:${nip19.npubEncode(players[i])} ${point[i] > 0 ? '+' : ''}${point[i]}\n`;
 						arScore[i] += point[i];
 					}
-					const emojiHai: string[] = stringToArrayPlain(arTehai[i]);
+					const emojiHai: string[] = stringToArrayPlain(arTehai[i] + arKawa[i].join(''));
 					const tags = [...getTagsAirrep(event), ...getTagsEmoji(emojiHai.join(''))];
 					res.push([content, tags]);
 					return [...goNextKyoku(event, -1, 0, new Map<string, number>(), [], [], []), ...res];
@@ -636,7 +636,8 @@ const sendNextTurn = (event: NostrEvent): [string, string[][]][] => {
 		let emojiHai: string[] = [];
 		for (let i = 0; i < players.length; i++) {
 			content += `nostr:${nip19.npubEncode(players[i])} ${arScore[i]}\n`
-				+ `${tehaiToEmoji(arTehai[i])}\n`;
+				+ `${tehaiToEmoji(arTehai[i])}\n`
+				+ `${tehaiToEmoji(arKawa[i].join(''))}\n`;
 			emojiHai = [...emojiHai, ...stringToArrayPlain(arTehai[i])];
 		}
 		const tags = [...getTagsAirrep(event), ...getTagsEmoji(emojiHai.join(''))];
