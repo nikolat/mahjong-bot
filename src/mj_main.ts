@@ -352,6 +352,11 @@ const goNextKyoku = (
 			}
 		}
 	}
+	else {
+		const content_ryukyoku = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY ryukyoku`;
+		const tags_ryukyoku = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+		res.push([content_ryukyoku, tags_ryukyoku]);
+	}
 	const content_kyokuend = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY kyokuend`;
 	const tags_kyokuend = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
 	res.push([content_kyokuend, tags_kyokuend]);
@@ -642,7 +647,7 @@ const sendNextTurn = (event: NostrEvent, ronPubkeys: string[] = []): [string, st
 		}
 		const tags = [...getTagsAirrep(event), ...getTagsEmoji(emojiHai.join(''))];
 		res.push([content, tags]);
-		return [...goNextKyoku(event, -1, 0, new Map<string, number>(), [], [], arTenpaiPlayerFlag, false), ...res];
+		return [...res, ...goNextKyoku(event, -1, 0, new Map<string, number>(), [], [], arTenpaiPlayerFlag, false)];
 	}
 	//流局
 	if (arYama[nYamaIndex] === undefined) {
