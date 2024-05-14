@@ -591,8 +591,57 @@ const setSutehai = (sute: string, nPlayer: number) => {
 	}
 };
 
-const sendNextTurn = (event: NostrEvent): [string, string[][]][] => {
+const sendNextTurn = (event: NostrEvent, ronPubkeys: string[] = []): [string, string[][]][] => {
 	const res: [string, string[][]][] = [];
+	let reason = '';
+	//四風子連打
+	if (nYamaIndex == 70 && arChihouChance[currentPlayer]) {
+		if ('1z2z3z4z'.includes(savedSutehai) && [1, 2, 3].every(i => arKawa[0][0] === arKawa[i][0]))
+			reason = '4renda';
+	}
+	//四開槓
+	if (countKantsu(arTehai[currentPlayer]) > 0) {
+		if (countKantsu(arTehai[0]) + countKantsu(arTehai[1]) + countKantsu(arTehai[2]) + countKantsu(arTehai[3]) === 4 && countKantsu(arTehai[currentPlayer]) !== 4)
+			reason = '4kan';
+	}
+	//四家立直
+	if (arRichiJunme[0] >= 0 && arRichiJunme[1] >= 0 && arRichiJunme[2] >= 0 && arRichiJunme[3] >= 0) {
+		reason = '4richi';
+	}
+	//三家和
+	if (ronPubkeys.length === 3) {
+		reason = '3ron';
+		//発声通知
+		for (const p of ronPubkeys) {
+			const content = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY say nostr:${nip19.npubEncode(p)} ron`;
+			const tags = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+			res.push([content, tags]);
+		}
+	}
+	//途中流局
+	if (reason.length > 0) {
+		let arTenpaiPlayerFlag = [0, 0, 0];
+		if (reason === '3ron') {
+			arTenpaiPlayerFlag = [1, 1, 1, 1];
+			arTenpaiPlayerFlag[currentPlayer] = 0;
+		}
+		else if (reason == '4richi') {
+			setKyotaku(currentPlayer);
+		}
+		const rm = new Map<string, string>([['4renda', '四風子連打'], ['4kan', '四開槓'], ['4richi', '四家立直'], ['3ron', '三家和']]);
+		let content = `${rm.get(reason)}\n\n`;
+		let emojiHai: string[] = [];
+		for (let i = 0; i < players.length; i++) {
+			content += `nostr:${nip19.npubEncode(players[i])} ${arScore[i]}\n`
+				+ `${tehaiToEmoji(arTehai[i])}\n`
+				+ `${tehaiToEmoji(arKawa[i].join(''))}\n`;
+			emojiHai = [...emojiHai, ...stringToArrayPlain(arTehai[i])];
+		}
+		const tags = [...getTagsAirrep(event), ...getTagsEmoji(emojiHai.join(''))];
+		res.push([content, tags]);
+		return [...goNextKyoku(event, -1, 0, new Map<string, number>(), [], [], arTenpaiPlayerFlag), ...res];
+	}
+	//流局
 	if (arYama[nYamaIndex] === undefined) {
 		//流し満貫判定
 		const strYaochu = '1m9m1p9p1s9s1z2z3z4z5z6z7z';
@@ -608,7 +657,7 @@ const sendNextTurn = (event: NostrEvent): [string, string[][]][] => {
 				if (isNagashimangan) {
 					const score = i == oyaIndex ? 12000 : 8000;
 					const point: number[] = getScoreAdd(i, -1, score, tsumibou, kyotaku, oyaIndex, []);
-					let content = 'ryukyoku 流し満貫\n';
+					let content = '流し満貫\n';
 					content += `nostr:${nip19.npubEncode(players[i])}\n`
 						+ `${tehaiToEmoji(arTehai[i])}\n`
 						+ `${tehaiToEmoji(arKawa[i].join(''))}\n\n`;
@@ -625,7 +674,7 @@ const sendNextTurn = (event: NostrEvent): [string, string[][]][] => {
 		}
 		const arTenpaiPlayerFlag = arTehai.map(tehai => getShanten(tehai)[0] === 0 ? 1 : 0);
 		const point: number[] = getScoreAddWithPao(-1, -1, 0, tsumibou, kyotaku, arTenpaiPlayerFlag, -1, -1, 0, oyaIndex);
-		let content = 'ryukyoku 荒牌平局\n';
+		let content = '荒牌平局\n';
 		for (let i = 0; i < players.length; i++) {
 			if (point[i] !== 0) {
 				content += `nostr:${nip19.npubEncode(players[i])} ${point[i] > 0 ? '+' : ''}${point[i]}\n`;
@@ -765,17 +814,7 @@ export const res_s_naku_call = (event: NostrEvent, action: string, pai1: string,
 		}
 	}
 	if (ronPubkeys.length === 3) {
-		const res: [string, string[][]][] = [];
-		for (const p of ronPubkeys) {
-			const content = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY say nostr:${nip19.npubEncode(p)} ron`;
-			const tags = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
-			res.push([content, tags]);
-		}
-		const content = 'ryukyoku 三家和';
-		const tags = getTagsAirrep(event);
-		res.push([content, tags]);
-		const arTenpaiPlayerFlag = arTehai.map(tehai => getShanten(tehai)[0] === 0 ? 1 : 0);
-		return [...goNextKyoku(event, -1, 0, new Map<string, number>(), [], [], arTenpaiPlayerFlag), ...res];
+		return sendNextTurn(event, ronPubkeys);
 	}
 	for (const a of ['ron', 'pon', 'kan', 'chi', 'no']) {
 		for (const [k, v] of reservedNaku) {
