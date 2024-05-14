@@ -4,7 +4,7 @@ import { canRichi, countKantsu, getAnkanHaiBest, getChiMaterial, getChiMaterialB
 import { getScore } from './mjlib/mj_score';
 import { addHai, compareFn, getDoraFromDorahyouji, paikind, removeHai, stringToArrayPlain, stringToArrayWithFuro } from './mjlib/mj_common';
 import { getMachi } from './mjlib/mj_machi';
-import { convertEmoji, getScoreAddWithPao, getTagsAirrep, getTagsEmoji, getTagsReply } from './utils';
+import { convertEmoji, getScoreAdd, getScoreAddWithPao, getTagsAirrep, getTagsEmoji, getTagsReply } from './utils';
 
 export const res_s_gamestart_call = (pubkey: string): void => {
 	reset_game();
@@ -594,6 +594,35 @@ const setSutehai = (sute: string, nPlayer: number) => {
 const sendNextTurn = (event: NostrEvent): [string, string[][]][] => {
 	const res: [string, string[][]][] = [];
 	if (arYama[nYamaIndex] === undefined) {
+		//流し満貫判定
+		const strYaochu = '1m9m1p9p1s9s1z2z3z4z5z6z7z';
+		for (let i = 0; i < players.length; i++) {
+			if (arFuroJunme.length === 0) {//鳴かれてない
+				let isNagashimangan = true;
+				for (let j = 0; j < arKawa[i].length; j++) {
+					if (!strYaochu.includes(arKawa[i][j])) {
+						isNagashimangan = false;
+						break;
+					}
+				}
+				if (isNagashimangan) {
+					const score = i == oyaIndex ? 12000 : 8000;
+					const point: number[] = getScoreAdd(i, -1, score, tsumibou, kyotaku, oyaIndex, []);
+					let content = 'ryukyoku 流し満貫\n';
+					content += `nostr:${nip19.npubEncode(players[i])}\n`
+						+ `${tehaiToEmoji(arTehai[i])}\n`
+						+ `${tehaiToEmoji(arKawa[i].join(''))}\n`;
+					for (let i = 0; i < players.length; i++) {
+						content += `nostr:${nip19.npubEncode(players[i])} ${point[i] > 0 ? '+' : ''}${point[i]}\n`;
+						arScore[i] += point[i];
+					}
+					const emojiHai: string[] = stringToArrayPlain(arTehai[i]);
+					const tags = [...getTagsAirrep(event), ...getTagsEmoji(emojiHai.join(''))];
+					res.push([content, tags]);
+					return [...goNextKyoku(event, -1, 0, new Map<string, number>(), [], [], []), ...res];
+				}
+			}
+		}
 		const arTenpaiPlayerFlag = arTehai.map(tehai => getShanten(tehai)[0] === 0 ? 1 : 0);
 		const point: number[] = getScoreAddWithPao(-1, -1, 0, tsumibou, kyotaku, arTenpaiPlayerFlag, -1, -1, 0, oyaIndex);
 		let content = 'ryukyoku 荒牌平局\n';

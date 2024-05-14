@@ -196,7 +196,7 @@ export const getScoreAddWithPao = (
 	return arScoreAdd;
 };
 
-const getScoreAdd = (
+export const getScoreAdd = (
 	nAgariPlayer: number,
 	nFurikomiPlayer: number,
 	score: number,
