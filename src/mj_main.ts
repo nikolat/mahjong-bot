@@ -296,7 +296,7 @@ const getScoreView = (
 	const content_view = content + '\n'
 		+ `${tehaiToEmoji(arTehai[nAgariPlayer])} :${convertEmoji(atarihai)}:`;
 	const tags_view = [...getTagsAirrep(event), ...getTagsEmoji(addHai(arTehai[nAgariPlayer], atarihai))];
-	return [...goNextKyoku(event, nAgariPlayer, r[1], r[3], arUradorahyouji, point, [0, 0, 0, 0]), [content_view, tags_view]];
+	return [...goNextKyoku(event, nAgariPlayer, r[1], r[3], arUradorahyouji, point, [0, 0, 0, 0], true), [content_view, tags_view]];
 };
 
 const goNextKyoku = (
@@ -307,46 +307,49 @@ const goNextKyoku = (
 	arUradorahyouji: string[],
 	arScoreAdd: number[],
 	arTenpaiPlayerFlag: number[],
+	needNotify: boolean,
 ): [string, string[][]][] => {
 	const res: [string, string[][]][] = [];
 	//通知
-	if (nAgariPlayer >= 0) {
-		if (arRichiJunme[nAgariPlayer] >= 0) {
-			for (let i = 0; i < arUradorahyouji.length; i++) {
-				const content_uradorahyouji = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY dora ${arUradorahyouji[i]}`;
-				const tags_uradorahyouji = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
-				res.push([content_uradorahyouji, tags_uradorahyouji]);
+	if (needNotify) {
+		if (nAgariPlayer >= 0) {
+			if (arRichiJunme[nAgariPlayer] >= 0) {
+				for (let i = 0; i < arUradorahyouji.length; i++) {
+					const content_uradorahyouji = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY dora ${arUradorahyouji[i]}`;
+					const tags_uradorahyouji = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+					res.push([content_uradorahyouji, tags_uradorahyouji]);
+				}
+			}
+			const a = ['agari', `nostr:${nip19.npubEncode(players[nAgariPlayer])}`, nFu];
+			for (const [k, v] of dYakuAndHan) {
+				a.push(`${k},${v}`);
+			}
+			const content_agari = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY ${a.join(' ')}`;
+			const tags_agari = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+			res.push([content_agari, tags_agari]);
+		}
+		else {
+			const content_ryukyoku = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY ryukyoku`;
+			const tags_ryukyoku = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+			res.push([content_ryukyoku, tags_ryukyoku]);
+			for (let i = 0; i < 4; i++) {
+				const say = arTenpaiPlayerFlag[i] !== 0 ? 'tenpai' : 'noten';
+				const content_tenpai = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY say nostr:${nip19.npubEncode(players[i])} ${say}`;
+				const tags_tenpai = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+				res.push([content_tenpai, tags_tenpai]);
 			}
 		}
-		const a = ['agari', `nostr:${nip19.npubEncode(players[nAgariPlayer])}`, nFu];
-		for (const [k, v] of dYakuAndHan) {
-			a.push(`${k},${v}`);
-		}
-		const content_agari = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY ${a.join(' ')}`;
-		const tags_agari = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
-		res.push([content_agari, tags_agari]);
-	}
-	else {
-		const content_ryukyoku = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY ryukyoku`;
-		const tags_ryukyoku = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
-		res.push([content_ryukyoku, tags_ryukyoku]);
 		for (let i = 0; i < 4; i++) {
-			const say = arTenpaiPlayerFlag[i] !== 0 ? 'tenpai' : 'noten';
-			const content_tenpai = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY say nostr:${nip19.npubEncode(players[i])} ${say}`;
-			const tags_tenpai = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
-			res.push([content_tenpai, tags_tenpai]);
-		}
-	}
-	for (let i = 0; i < 4; i++) {
-		let fugo = '';
-		if (arScoreAdd[i] > 0)
-			fugo = '+';
-		else if (arScoreAdd[i] < 0)
-			fugo = '-';
-		if (fugo !== '') {
-			const content_point = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY point nostr:${nip19.npubEncode(players[i])} ${fugo} ${Math.abs(arScoreAdd[i])}`;
-			const tags_point = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
-			res.push([content_point, tags_point]);
+			let fugo = '';
+			if (arScoreAdd[i] > 0)
+				fugo = '+';
+			else if (arScoreAdd[i] < 0)
+				fugo = '-';
+			if (fugo !== '') {
+				const content_point = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY point nostr:${nip19.npubEncode(players[i])} ${fugo} ${Math.abs(arScoreAdd[i])}`;
+				const tags_point = [...getTagsAirrep(event), ...players.map(pubkey => ['p', pubkey, ''])];
+				res.push([content_point, tags_point]);
+			}
 		}
 	}
 	const content_kyokuend = `${players.map(pubkey => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY kyokuend`;
@@ -635,11 +638,11 @@ const sendNextTurn = (event: NostrEvent, ronPubkeys: string[] = []): [string, st
 			content += `nostr:${nip19.npubEncode(players[i])} ${arScore[i]}\n`
 				+ `${tehaiToEmoji(arTehai[i])}\n`
 				+ `${tehaiToEmoji(arKawa[i].join(''))}\n`;
-			emojiHai = [...emojiHai, ...stringToArrayPlain(arTehai[i])];
+			emojiHai = [...emojiHai, ...stringToArrayPlain(arTehai[i] + arKawa[i].join(''))];
 		}
 		const tags = [...getTagsAirrep(event), ...getTagsEmoji(emojiHai.join(''))];
 		res.push([content, tags]);
-		return [...goNextKyoku(event, -1, 0, new Map<string, number>(), [], [], arTenpaiPlayerFlag), ...res];
+		return [...goNextKyoku(event, -1, 0, new Map<string, number>(), [], [], arTenpaiPlayerFlag, false), ...res];
 	}
 	//流局
 	if (arYama[nYamaIndex] === undefined) {
@@ -668,7 +671,7 @@ const sendNextTurn = (event: NostrEvent, ronPubkeys: string[] = []): [string, st
 					const emojiHai: string[] = stringToArrayPlain(arTehai[i] + arKawa[i].join(''));
 					const tags = [...getTagsAirrep(event), ...getTagsEmoji(emojiHai.join(''))];
 					res.push([content, tags]);
-					return [...goNextKyoku(event, -1, 0, new Map<string, number>(), [], [], []), ...res];
+					return [...goNextKyoku(event, -1, 0, new Map<string, number>(), [], [], [], false), ...res];
 				}
 			}
 		}
@@ -687,11 +690,11 @@ const sendNextTurn = (event: NostrEvent, ronPubkeys: string[] = []): [string, st
 			content += `nostr:${nip19.npubEncode(players[i])} ${arScore[i]}\n`
 				+ `${tehaiToEmoji(arTehai[i])}\n`
 				+ `${tehaiToEmoji(arKawa[i].join(''))}\n`;
-			emojiHai = [...emojiHai, ...stringToArrayPlain(arTehai[i])];
+			emojiHai = [...emojiHai, ...stringToArrayPlain(arTehai[i] + arKawa[i].join(''))];
 		}
 		const tags = [...getTagsAirrep(event), ...getTagsEmoji(emojiHai.join(''))];
 		res.push([content, tags]);
-		return [...goNextKyoku(event, -1, 0, new Map<string, number>(), [], [], arTenpaiPlayerFlag), ...res];
+		return [...goNextKyoku(event, -1, 0, new Map<string, number>(), [], [], arTenpaiPlayerFlag, true), ...res];
 	}
 	setKyotaku(currentPlayer);
 	savedTsumo = arYama[nYamaIndex++];
