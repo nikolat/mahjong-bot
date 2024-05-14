@@ -597,7 +597,7 @@ const sendNextTurn = (event: NostrEvent): [string, string[][]][] => {
 		//流し満貫判定
 		const strYaochu = '1m9m1p9p1s9s1z2z3z4z5z6z7z';
 		for (let i = 0; i < players.length; i++) {
-			if (arFuroJunme.length === 0) {//鳴かれてない
+			if (arFuroJunme[i].length === 0) {//鳴かれてない
 				let isNagashimangan = true;
 				for (let j = 0; j < arKawa[i].length; j++) {
 					if (!strYaochu.includes(arKawa[i][j])) {
