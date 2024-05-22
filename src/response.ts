@@ -154,7 +154,9 @@ const res_s_join = (event: NostrEvent): [string, string[][]][] | null => {
 	if (count === 4) {
 		return mahjongGameStart(event);
 	}
-	return null;
+	else {
+		return [[`${count}/4 joined.`, getTagsAirrep(event)]];
+	}
 };
 
 const res_s_next = (event: NostrEvent): [string, string[][]][] | null => {
