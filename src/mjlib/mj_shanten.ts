@@ -6,7 +6,7 @@ import {
 	stringArrayToNumArray,
 	stringToArrayWithFuro,
 	uniq,
-} from './mj_common';
+} from './mj_common.js';
 
 const SHANTEN_MAX = 99;
 

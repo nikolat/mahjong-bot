@@ -1,10 +1,10 @@
 import { type NostrEvent, nip19 } from 'nostr-tools';
-import { getShanten } from './mjlib/mj_shanten';
-import { canRichi, countKantsu, getAnkanHaiBest, getChiMaterial, getChiMaterialBest, getKakanHai, getKakanHaiBest, naniwokiru, shouldDaiminkan, shouldPon, shouldRichi } from './mjlib/mj_ai';
-import { getScore } from './mjlib/mj_score';
-import { addHai, compareFn, getDoraFromDorahyouji, paikind, removeHai, stringToArrayPlain, stringToArrayWithFuro } from './mjlib/mj_common';
-import { getMachi } from './mjlib/mj_machi';
-import { convertEmoji, getScoreAdd, getScoreAddWithPao, getTagsAirrep, getTagsEmoji, getTagsReply } from './utils';
+import { getShanten } from './mjlib/mj_shanten.js';
+import { canRichi, countKantsu, getAnkanHaiBest, getChiMaterial, getChiMaterialBest, getKakanHai, getKakanHaiBest, naniwokiru, shouldDaiminkan, shouldPon, shouldRichi } from './mjlib/mj_ai.js';
+import { getScore } from './mjlib/mj_score.js';
+import { addHai, compareFn, getDoraFromDorahyouji, paikind, removeHai, stringToArrayPlain, stringToArrayWithFuro } from './mjlib/mj_common.js';
+import { getMachi } from './mjlib/mj_machi.js';
+import { convertEmoji, getScoreAdd, getScoreAddWithPao, getTagsAirrep, getTagsEmoji, getTagsReply } from './utils.js';
 
 export const res_s_gamestart_call = (pubkey: string): void => {
 	reset_game();

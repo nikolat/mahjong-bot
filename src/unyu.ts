@@ -1,7 +1,12 @@
-import { type Event as NostrEvent, type Filter, Relay, nip47, nip57, SimplePool } from 'nostr-tools';
-import { Mode, Signer } from './utils';
+import { nip47 } from 'nostr-tools';
+import { SimplePool } from 'nostr-tools/pool';
+import * as nip57 from 'nostr-tools/nip57';
+import { Relay } from 'nostr-tools/relay';
+import type { Filter } from 'nostr-tools/filter';
+import type { NostrEvent } from 'nostr-tools/core';
+import { Mode, Signer } from './utils.js';
 import { hexToBytes } from '@noble/hashes/utils';
-import { relayUrl } from './config';
+import { relayUrl } from './config.js';
 
 const res_ohayo = async (event: NostrEvent, mode: Mode, regstr: RegExp, signer: Signer, pool: SimplePool): Promise<null> => {
 	await ohayou_zap(event, signer, pool);

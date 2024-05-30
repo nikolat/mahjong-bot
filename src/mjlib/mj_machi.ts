@@ -2,8 +2,8 @@ import {
 	compareFn,
 	stringArrayToNumArray,
 	stringToArrayWithFuro,
-} from "./mj_common";
-import { getShanten } from "./mj_shanten";
+} from "./mj_common.js";
+import { getShanten } from "./mj_shanten.js";
 
 //待ちの取得
 export const getMachi = (tehai: string): string => {

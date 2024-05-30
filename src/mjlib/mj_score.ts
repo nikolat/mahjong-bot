@@ -6,12 +6,12 @@ import {
 	stringToArray,
 	stringToArrayPlain,
 	stringToArrayWithFuro,
-} from './mj_common';
+} from './mj_common.js';
 import { 
 	getShantenChitoitsu,
 	getShantenKokushimusou,
 	getShantenNormal,
-} from './mj_shanten';
+} from './mj_shanten.js';
 
 //点数の取得
 export const getScore = (

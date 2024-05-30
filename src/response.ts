@@ -1,6 +1,8 @@
-import { type EventTemplate, type VerifiedEvent, type NostrEvent, SimplePool, nip19 } from 'nostr-tools';
-import { Mode, Signer, getTagsAirrep, getTagsReply } from './utils';
-import { mahjongGameStart, res_c_naku_call, res_c_sutehai_call, res_s_debug_call, res_s_gamestart_call, res_s_join_call, res_s_naku_call, res_s_reset_call, res_s_status_call, res_s_sutehai_call, startKyoku } from './mj_main';
+import type { EventTemplate, NostrEvent, VerifiedEvent } from 'nostr-tools/core';
+import type { SimplePool } from 'nostr-tools/pool';
+import * as nip19 from 'nostr-tools/nip19';
+import { Mode, Signer, getTagsAirrep, getTagsReply } from './utils.js';
+import { mahjongGameStart, res_c_naku_call, res_c_sutehai_call, res_s_debug_call, res_s_gamestart_call, res_s_join_call, res_s_naku_call, res_s_reset_call, res_s_status_call, res_s_sutehai_call, startKyoku } from './mj_main.js';
 
 export const getResponseEvent = async (requestEvent: NostrEvent, signer: Signer, mode: Mode, pool: SimplePool): Promise<VerifiedEvent[] | null> => {
 	if (requestEvent.pubkey === signer.getPublicKey()) {

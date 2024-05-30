@@ -1,19 +1,15 @@
-import { page } from './page';
-import {
-	nip19,
-	validateEvent,
-	SimplePool,
-	getPublicKey,
-	type Filter,
-	type NostrEvent,
-	type VerifiedEvent,
-	useWebSocketImplementation,
-} from 'nostr-tools';
-useWebSocketImplementation(require('ws'));
+import type { Filter } from 'nostr-tools/filter';
+import { type NostrEvent, type VerifiedEvent, validateEvent } from 'nostr-tools';
+import { getPublicKey } from 'nostr-tools/pure';
+import { SimplePool, useWebSocketImplementation } from 'nostr-tools/pool';
+import * as nip19 from 'nostr-tools/nip19';
+import WebSocket from 'ws';
+useWebSocketImplementation(WebSocket);
 import { setTimeout as sleep } from 'node:timers/promises';
-import { Mode, Signer } from './utils';
-import { relayUrl, getNsecs, isDebug } from './config';
-import { getResponseEvent } from './response';
+import { Mode, Signer } from './utils.js';
+import { relayUrl, getNsecs, isDebug } from './config.js';
+import { getResponseEvent } from './response.js';
+import { page } from './page.js';
 
 if (!isDebug)
 	page();
