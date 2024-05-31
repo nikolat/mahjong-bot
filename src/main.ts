@@ -1,6 +1,5 @@
 import type { Filter } from 'nostr-tools/filter';
-import { type NostrEvent, type VerifiedEvent, validateEvent } from 'nostr-tools';
-import { getPublicKey } from 'nostr-tools/pure';
+import { type NostrEvent, type VerifiedEvent, getPublicKey, validateEvent } from 'nostr-tools/pure';
 import { SimplePool, useWebSocketImplementation } from 'nostr-tools/pool';
 import * as nip19 from 'nostr-tools/nip19';
 import WebSocket from 'ws';
@@ -49,11 +48,6 @@ const main = async () => {
 			'#p': Array.from(signermap.keys()),
 			since: now
 		},
-//		{
-//			kinds: [1, 42],
-//			'#p': [pubkey_unyu],
-//			since: now
-//		}
 	];
 	const onevent = async (ev: NostrEvent) => {
 		if (!validateEvent(ev)) {
@@ -63,14 +57,10 @@ const main = async () => {
 		//出力イベントを取得
 		let responseEvents: VerifiedEvent[] = [];
 		const targetPubkeys = new Set(ev.tags.filter(tag => tag.length >= 2 && tag[0] === 'p' && Array.from(signermap.values()).map(signer => signer.getPublicKey()).includes(tag[1])).map(tag => tag[1]));
-//		if (/^うにゅう(([くさた]|ちゃ)ん)?、/.test(ev.content)) {
-//			targetPubkeys.add(pubkey_unyu);
-//		}
 		for (const pubkey of targetPubkeys) {
 			let rs: VerifiedEvent[] | null;
 			const mode = pubkey === pubkey_jongbari ? Mode.Server
-				: [pubkey_rinrin, pubkey_chunchun, pubkey_whanwhan, pubkey_bee].includes(pubkey) ? Mode.Client
-				: pubkey === pubkey_unyu ? Mode.Client
+				: [pubkey_rinrin, pubkey_chunchun, pubkey_whanwhan, pubkey_bee, pubkey_unyu].includes(pubkey) ? Mode.Client
 				: Mode.Unknown
 			try {
 				rs = await getResponseEvent(ev, signermap.get(pubkey) as Signer, mode, pool);

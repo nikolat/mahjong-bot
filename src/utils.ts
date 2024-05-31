@@ -1,13 +1,11 @@
 import type { Readable } from 'node:stream';
 import { Buffer } from 'node:buffer';
-import type { EventTemplate, NostrEvent } from 'nostr-tools/core';
-import { finalizeEvent, getPublicKey } from 'nostr-tools/pure';
+import { type EventTemplate, type NostrEvent, finalizeEvent, getPublicKey } from 'nostr-tools/pure';
 import { stringToArrayPlain } from './mjlib/mj_common.js';
 
 export const enum Mode {
 	Server,
 	Client,
-	Unyu,
 	Unknown,
 };
 

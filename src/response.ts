@@ -1,4 +1,4 @@
-import type { EventTemplate, NostrEvent, VerifiedEvent } from 'nostr-tools/core';
+import type { EventTemplate, NostrEvent, VerifiedEvent } from 'nostr-tools/pure';
 import type { SimplePool } from 'nostr-tools/pool';
 import * as nip19 from 'nostr-tools/nip19';
 import { Mode, Signer, getTagsAirrep, getTagsReply } from './utils.js';
@@ -78,16 +78,11 @@ const getResmap = (mode: Mode): [RegExp, (event: NostrEvent, mode: Mode, regstr:
 		[/GET\ssutehai\?$/s, res_c_sutehai],
 		[/GET\snaku\?\s(((ron|kan|pon|chi)\s)*(ron|kan|pon|chi))$/s, res_c_naku],
 	];
-//	const resmapUnyu: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp, signer: Signer, pool: SimplePool) => Promise<null>][] = [
-//		[/おはよ/, res_ohayo],
-//	];
 	switch (mode) {
 		case Mode.Server:
 			return resmapServer;
 		case Mode.Client:
 			return resmapClient;
-//		case Mode.Unyu:
-//			return resmapUnyu;
 		default:
 			throw new TypeError(`unknown mode: ${mode}`);
 	}

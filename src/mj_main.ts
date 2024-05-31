@@ -1,4 +1,5 @@
-import { type NostrEvent, nip19 } from 'nostr-tools';
+import type { NostrEvent } from 'nostr-tools/pure';
+import * as nip19 from 'nostr-tools/nip19';
 import { getShanten } from './mjlib/mj_shanten.js';
 import { canRichi, countKantsu, getAnkanHaiBest, getChiMaterial, getChiMaterialBest, getKakanHai, getKakanHaiBest, naniwokiru, shouldDaiminkan, shouldPon, shouldRichi } from './mjlib/mj_ai.js';
 import { getScore } from './mjlib/mj_score.js';
