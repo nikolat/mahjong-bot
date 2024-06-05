@@ -115,10 +115,11 @@ const main = async () => {
 				{ onevent: onevent2, oneose: oneose2 }
 			);
 			const getTagsFav = (event: NostrEvent): string[][] => {
-				const tagsFav: string[][] = event.tags.filter(tag => tag.length >= 2 && (tag[0] === 'e' || (tag[0] === 'p' && tag[1] !== event.pubkey)));
-				tagsFav.push(['e', event.id, '', '']);
-				tagsFav.push(['p', event.pubkey, '']);
-				tagsFav.push(['k', String(event.kind)]);
+				const tagsFav: string[][] = [
+					['e', event.id, '', ''],
+					['p', event.pubkey, ''],
+					['k', String(event.kind)]
+				];
 				return tagsFav;
 			};
 		}
