@@ -424,6 +424,7 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
 			else {
 				const content = 'You cannot tsumo.';
 				const tags = getTagsReply(event);
+				dResponseNeed.set(event.pubkey, command);
 				return [[content, tags]];
 			}
 			break;
@@ -438,6 +439,7 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
 			else {
 				const content = `You cannot richi ${pai}.`;
 				const tags = getTagsReply(event);
+				dResponseNeed.set(event.pubkey, command);
 				return [[content, tags]];
 			}
 			break;
@@ -449,6 +451,7 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
 			else {
 				const content = `You cannot sutehai ${pai} .`;
 				const tags = getTagsReply(event);
+				dResponseNeed.set(event.pubkey, command);
 				return [[content, tags]];
 			}
 			break;
@@ -488,6 +491,7 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
 			else {
 				const content = `You cannot ankan ${pai} .`;
 				const tags = getTagsReply(event);
+				dResponseNeed.set(event.pubkey, command);
 				return [[content, tags]];
 			}
 		case 'kakan':
@@ -549,6 +553,7 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
 			else {
 				const content = `You cannot kakan ${pai} .`;
 				const tags = getTagsReply(event);
+				dResponseNeed.set(event.pubkey, command);
 				return [[content, tags]];
 			}
 			break;
