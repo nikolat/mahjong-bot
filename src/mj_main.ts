@@ -898,7 +898,7 @@ const execNaku = (event: NostrEvent, pubkey: string, actions: string[]): [string
 				return res;
 			}
 			else {
-				const content = 'You cannot pon.';
+				const content = 'You cannot kan.';
 				const tags = getTagsReply(event);
 				res.push([content, tags]);
 			}
@@ -936,7 +936,7 @@ const execNaku = (event: NostrEvent, pubkey: string, actions: string[]): [string
 				const hai2: string = actions[2];
 				const a: string[] = getChiMaterial(arTehai[i], savedSutehai);
 				if (!a.includes(`${hai1}${hai2}`)) {
-					const content = 'You cannot chi with ${hai1}${hai2}.';
+					const content = `You cannot chi with ${hai1}${hai2}.`;
 					const tags = getTagsReply(event);
 					res.push([content, tags]);
 					break;
