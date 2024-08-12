@@ -9,7 +9,7 @@ import { SimplePool, useWebSocketImplementation } from 'nostr-tools/pool';
 import * as nip19 from 'nostr-tools/nip19';
 import WebSocket from 'ws';
 useWebSocketImplementation(WebSocket);
-import { setTimeout as sleep } from 'node:timers/promises';
+//import { setTimeout as sleep } from 'node:timers/promises';
 import { Mode, Signer } from './utils.js';
 import { relayUrl, getNsecs, isDebug } from './config.js';
 import { getResponseEvent } from './response.js';
@@ -33,7 +33,7 @@ const main = async () => {
   }
   const signermap = new Map<string, Signer>();
   for (const nsec of nsecs) {
-    const dr = nip19.decode(nsec as string);
+    const dr = nip19.decode(nsec!);
     if (dr.type !== 'nsec') {
       throw Error('NOSTR_PRIVATE_KEY is not `nsec`');
     }
@@ -42,23 +42,19 @@ const main = async () => {
     signermap.set(signer.getPublicKey(), signer);
   }
   const pubkey_jongbari = getPublicKey(
-    nip19.decode(nsec_jongbari as string).data as Uint8Array,
+    nip19.decode(nsec_jongbari!).data as Uint8Array,
   );
   const pubkey_rinrin = getPublicKey(
-    nip19.decode(nsec_rinrin as string).data as Uint8Array,
+    nip19.decode(nsec_rinrin!).data as Uint8Array,
   );
   const pubkey_chunchun = getPublicKey(
-    nip19.decode(nsec_chunchun as string).data as Uint8Array,
+    nip19.decode(nsec_chunchun!).data as Uint8Array,
   );
   const pubkey_whanwhan = getPublicKey(
-    nip19.decode(nsec_whanwhan as string).data as Uint8Array,
+    nip19.decode(nsec_whanwhan!).data as Uint8Array,
   );
-  const pubkey_bee = getPublicKey(
-    nip19.decode(nsec_bee as string).data as Uint8Array,
-  );
-  const pubkey_unyu = getPublicKey(
-    nip19.decode(nsec_unyu as string).data as Uint8Array,
-  );
+  const pubkey_bee = getPublicKey(nip19.decode(nsec_bee!).data as Uint8Array);
+  const pubkey_unyu = getPublicKey(nip19.decode(nsec_unyu!).data as Uint8Array);
 
   //リレーに接続
   const pool = new SimplePool();
@@ -106,12 +102,7 @@ const main = async () => {
             ? Mode.Client
             : Mode.Unknown;
       try {
-        rs = await getResponseEvent(
-          ev,
-          signermap.get(pubkey) as Signer,
-          mode,
-          pool,
-        );
+        rs = await getResponseEvent(ev, signermap.get(pubkey)!, mode, pool);
       } catch (error) {
         console.error(error);
         return;
@@ -133,7 +124,7 @@ const main = async () => {
           `RES from ${nip19.npubEncode(responseEvent.pubkey)}\n${responseEvent.content}`,
         );
         console.log(results);
-        await sleep(100);
+        //await sleep(100);
       }
     }
   };
@@ -143,13 +134,13 @@ const main = async () => {
       const filters2 = [
         {
           kinds: [42],
-          '#p': [(signermap.get(pubkey_jongbari) as Signer).getPublicKey()],
+          '#p': [signermap.get(pubkey_jongbari)!.getPublicKey()],
           limit: 1,
         },
       ];
       let bootEvent: VerifiedEvent;
       const onevent2 = async (ev2: NostrEvent) => {
-        bootEvent = (signermap.get(pubkey_jongbari) as Signer).finishEvent({
+        bootEvent = signermap.get(pubkey_jongbari)!.finishEvent({
           kind: 7,
           tags: getTagsFav(ev2),
           content: '🌅',

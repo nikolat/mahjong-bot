@@ -1,7 +1,9 @@
-import type {
-  EventTemplate,
-  NostrEvent,
-  VerifiedEvent,
+import {
+  getEventHash,
+  type UnsignedEvent,
+  type EventTemplate,
+  type NostrEvent,
+  type VerifiedEvent,
 } from 'nostr-tools/pure';
 import type { SimplePool } from 'nostr-tools/pool';
 import * as nip19 from 'nostr-tools/nip19';
@@ -34,7 +36,39 @@ export const getResponseEvent = async (
   if (res === null) {
     return null;
   }
-  return res.map((ev) => signer.finishEvent(ev));
+  const unsignedEvents: UnsignedEvent[] = res.map((ev) => {
+    return {
+      ...ev,
+      pubkey: signer.getPublicKey(),
+    };
+  });
+  return mineNonceForSort(unsignedEvents).map((ev) => signer.finishEvent(ev));
+};
+
+const mineNonceForSort = (events: UnsignedEvent[]): UnsignedEvent[] => {
+  const id_max = parseInt('f'.repeat(64), 16);
+  const diff = id_max / events.length;
+  let i = 0;
+  for (let ev of events) {
+    let nonce_n = 0;
+    while (
+      !(
+        diff * i <= parseInt(getEventHash(ev), 16) &&
+        parseInt(getEventHash(ev), 16) < diff * (i + 1)
+      )
+    ) {
+      const nonceTag = ev.tags.find(
+        (tag) => tag.length >= 2 && tag[0] === 'nonce',
+      );
+      if (nonceTag !== undefined) {
+        nonceTag[1] = String(nonce_n++);
+      } else {
+        ev.tags.push(['nonce', String(nonce_n)]);
+      }
+    }
+    i++;
+  }
+  return events;
 };
 
 const selectResponse = async (
@@ -50,15 +84,13 @@ const selectResponse = async (
   if (res === null) {
     return null;
   }
-  const unsignedEvents: EventTemplate[] = [];
-  let t = 1;
+  const templateEvents: EventTemplate[] = [];
   for (const ev of res) {
-    const [content, kind, tags, created_at] = [...ev, event.created_at + t];
-    const unsignedEvent: EventTemplate = { kind, tags, content, created_at };
-    unsignedEvents.push(unsignedEvent);
-    t++;
+    const [content, kind, tags, created_at] = [...ev, event.created_at + 1];
+    const templateEvent: EventTemplate = { kind, tags, content, created_at };
+    templateEvents.push(templateEvent);
   }
-  return unsignedEvents;
+  return templateEvents;
 };
 
 const isAllowedToPost = (event: NostrEvent) => {
