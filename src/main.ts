@@ -9,7 +9,7 @@ import { SimplePool, useWebSocketImplementation } from 'nostr-tools/pool';
 import * as nip19 from 'nostr-tools/nip19';
 import WebSocket from 'ws';
 useWebSocketImplementation(WebSocket);
-//import { setTimeout as sleep } from 'node:timers/promises';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { Mode, Signer } from './utils.js';
 import { relayUrl, getNsecs, isDebug } from './config.js';
 import { getResponseEvent } from './response.js';
@@ -158,7 +158,7 @@ const main = async () => {
           `RES from ${nip19.npubEncode(responseEvent.pubkey)}\n${responseEvent.content}`,
         );
         console.log(results);
-        //await sleep(100);
+        await sleep(100);
       }
     }
   };
