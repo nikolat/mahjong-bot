@@ -67,10 +67,44 @@ const main = async () => {
       '#p': Array.from(signermap.keys()),
       since: now,
     },
+    {
+      //do not sleep
+      kinds: [1],
+      since: now,
+    },
   ];
+  const d = new Date();
+  let lastKind1Time = Math.floor(
+    new Date(
+      d.getFullYear(),
+      d.getMonth(),
+      d.getDate(),
+      d.getHours(),
+      d.getMinutes(),
+    ).getTime() / 1000,
+  );
   const onevent = async (ev: NostrEvent) => {
     if (!validateEvent(ev)) {
       console.error('Invalid event', ev);
+      return;
+    }
+    if (ev.kind === 1) {
+      //do not sleep
+      const d2 = new Date();
+      const nowKind1Time = Math.floor(
+        new Date(
+          d2.getFullYear(),
+          d2.getMonth(),
+          d2.getDate(),
+          d2.getHours(),
+          d2.getMinutes(),
+        ).getTime() / 1000,
+      );
+      if (lastKind1Time < nowKind1Time) {
+        lastKind1Time = nowKind1Time;
+        const mes = `[${new Date(lastKind1Time * 1000).toISOString()}]`;
+        console.log(mes);
+      }
       return;
     }
     //出力イベントを取得
