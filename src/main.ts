@@ -84,10 +84,6 @@ const main = async () => {
     ).getTime() / 1000,
   );
   const onevent = async (ev: NostrEvent) => {
-    if (!validateEvent(ev)) {
-      console.error('Invalid event', ev);
-      return;
-    }
     if (ev.kind === 1) {
       //do not sleep
       const d2 = new Date();
