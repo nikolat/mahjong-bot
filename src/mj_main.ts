@@ -221,7 +221,7 @@ export const startKyoku = (event: NostrEvent): [string, string[][]][] => {
   }
   //haipai通知
   for (let i = 0; i < players.length; i++) {
-    const content = `nostr:${nip19.npubEncode(players[i])} NOTIFY haipai\n${tehaiToEmoji(arTehai[i])}`;
+    const content = `nostr:${nip19.npubEncode(players[i])} NOTIFY haipai nostr:${nip19.npubEncode(players[i])} ${arTehai[i]}\n${tehaiToEmoji(arTehai[i])}`;
     const tags = [
       ...getTagsAirrep(event),
       ['p', players[i], ''],
