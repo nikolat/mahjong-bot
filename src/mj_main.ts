@@ -101,8 +101,12 @@ export const mahjongGameStart = (event: NostrEvent): [string, string[][]][] => {
   else oyaIndex = Math.floor(Math.random() * 4);
   const dSeki = getSeki(oyaIndex);
   for (let i = 0; i < players.length; i++) {
-    const content = `nostr:${nip19.npubEncode(players[i])} NOTIFY gamestart ${dSeki.get(players[i])} ${players.map((pubkey) => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')}`;
-    const tags = [...getTagsAirrep(event), ['p', players[i], '']];
+    const content = `nostr:${nip19.npubEncode(players[i])} #gamestart NOTIFY gamestart ${dSeki.get(players[i])} ${players.map((pubkey) => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')}`;
+    const tags = [
+      ...getTagsAirrep(event),
+      ['p', players[i], ''],
+      ['t', 'gamestart'],
+    ];
     res.push([content, tags]);
   }
   return [...res, ...startKyoku(event)];
@@ -204,10 +208,11 @@ export const startKyoku = (event: NostrEvent): [string, string[][]][] => {
   dResponseNeed = new Map<string, string>(players.map((p) => [p, '']));
   let s: string = '';
   //kyokustart通知
-  const content = `${players.map((pubkey) => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY kyokustart ${arBafu[bafu]} nostr:${nip19.npubEncode(players[oyaIndex])} ${tsumibou} ${kyotaku}`;
+  const content = `${players.map((pubkey) => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} #kyokustart NOTIFY kyokustart ${arBafu[bafu]} nostr:${nip19.npubEncode(players[oyaIndex])} ${tsumibou} ${kyotaku}`;
   const tags = [
     ...getTagsAirrep(event),
     ...players.map((pubkey) => ['p', pubkey, '']),
+    ['t', 'kyokustart'],
   ];
   res.push([content, tags]);
   //point通知
