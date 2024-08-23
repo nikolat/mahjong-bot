@@ -49,7 +49,7 @@ const mineNonceForSort = (events: UnsignedEvent[]): UnsignedEvent[] => {
   const id_max = parseInt('f'.repeat(64), 16);
   const diff = id_max / events.length;
   let i = 0;
-  for (let ev of events) {
+  for (let ev of [...events].reverse()) {
     let nonce_n = 0;
     while (
       !(
