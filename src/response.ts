@@ -151,7 +151,7 @@ const getResmap = (
       /naku\?\s(no|ron|kan|pon|chi)\s?([1-9][mpsz])?\s?([1-9][mpsz])?/,
       res_s_naku,
     ],
-    [/^(no|ron|kan|pon|chi)\s?([1-9][mpsz])?\s?([1-9][mpsz])?/, res_s_naku],
+    [/^(no|ron|kan|pon|chi(\s([1-9][mpsz])){2})$/, res_s_naku],
   ];
   const resmapClient: [
     RegExp,
