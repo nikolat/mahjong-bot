@@ -1,8 +1,9 @@
 export const relayUrl = [
 	'wss://relay.nostr.wirednet.jp',
+	'wss://yabu.me',
 //	'wss://relay.mymt.casa',
 //	'wss://nostr-relay.nokotaro.com',
-	'wss://nrelay.c-stellar.net',
+//	'wss://nrelay.c-stellar.net',
 ];
 
 export const getNsecs = (): (string | undefined)[] => {
