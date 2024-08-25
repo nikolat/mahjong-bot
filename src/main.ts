@@ -1,19 +1,20 @@
-import type { Filter } from 'nostr-tools/filter';
-import {
-  type NostrEvent,
-  type VerifiedEvent,
-  getPublicKey,
-  validateEvent,
-} from 'nostr-tools/pure';
-import { SimplePool, useWebSocketImplementation } from 'nostr-tools/pool';
+import { type VerifiedEvent, getPublicKey } from 'nostr-tools/pure';
 import * as nip19 from 'nostr-tools/nip19';
 import WebSocket from 'ws';
-useWebSocketImplementation(WebSocket);
 import { setTimeout as sleep } from 'node:timers/promises';
-import { Mode, Signer } from './utils.js';
-import { relayUrl, getNsecs, isDebug } from './config.js';
+import { getTagsFav, Mode, Signer } from './utils.js';
+import { relayUrls, getNsecs, isDebug } from './config.js';
 import { getResponseEvent } from './response.js';
 import { page } from './page.js';
+import {
+  createRxBackwardReq,
+  createRxForwardReq,
+  createRxNostr,
+  EventPacket,
+  uniq,
+} from 'rx-nostr';
+import { verifier } from 'rx-nostr-crypto';
+import { Subject } from 'rxjs';
 
 if (!isDebug) page();
 
@@ -57,22 +58,17 @@ const main = async () => {
   const pubkey_unyu = getPublicKey(nip19.decode(nsec_unyu!).data as Uint8Array);
 
   //リレーに接続
-  const pool = new SimplePool();
-
-  //イベントの監視
+  const rxNostr = createRxNostr({
+    verifier,
+    websocketCtor: WebSocket,
+  });
+  rxNostr.setDefaultRelays(relayUrls);
+  const rxReqB = createRxBackwardReq();
+  const rxReqF1 = createRxForwardReq();
+  const rxReqF2 = createRxForwardReq();
   const now = Math.floor(Date.now() / 1000);
-  const filters: Filter[] = [
-    {
-      kinds: [42],
-      '#p': Array.from(signermap.keys()),
-      since: now,
-    },
-    {
-      //do not sleep
-      kinds: [1],
-      since: now,
-    },
-  ];
+  const flushes$ = new Subject<void>();
+
   const d = new Date();
   let lastKind1Time = Math.floor(
     new Date(
@@ -83,26 +79,27 @@ const main = async () => {
       d.getMinutes(),
     ).getTime() / 1000,
   );
-  const onevent = async (ev: NostrEvent) => {
-    if (ev.kind === 1) {
-      //do not sleep
-      const d2 = new Date();
-      const nowKind1Time = Math.floor(
-        new Date(
-          d2.getFullYear(),
-          d2.getMonth(),
-          d2.getDate(),
-          d2.getHours(),
-          d2.getMinutes(),
-        ).getTime() / 1000,
-      );
-      if (lastKind1Time < nowKind1Time) {
-        lastKind1Time = nowKind1Time;
-        const mes = `[${new Date(lastKind1Time * 1000).toISOString()}]`;
-        console.log(mes);
-      }
-      return;
+  const nextF1 = async (packet: EventPacket) => {
+    const ev = packet.event;
+    //do not sleep
+    const d2 = new Date();
+    const nowKind1Time = Math.floor(
+      new Date(
+        d2.getFullYear(),
+        d2.getMonth(),
+        d2.getDate(),
+        d2.getHours(),
+        d2.getMinutes(),
+      ).getTime() / 1000,
+    );
+    if (lastKind1Time < nowKind1Time) {
+      lastKind1Time = nowKind1Time;
+      const mes = `[${new Date(lastKind1Time * 1000).toISOString()}]`;
+      console.log(mes);
     }
+  };
+  const nextF2 = async (packet: EventPacket) => {
+    const ev = packet.event;
     //出力イベントを取得
     let responseEvents: VerifiedEvent[] = [];
     const targetPubkeys = new Set(
@@ -132,7 +129,7 @@ const main = async () => {
             ? Mode.Client
             : Mode.Unknown;
       try {
-        rs = await getResponseEvent(ev, signermap.get(pubkey)!, mode, pool);
+        rs = await getResponseEvent(ev, signermap.get(pubkey)!, mode);
       } catch (error) {
         console.error(error);
         return;
@@ -147,65 +144,67 @@ const main = async () => {
     console.info(`REQ from ${nip19.npubEncode(ev.pubkey)}\n${ev.content}`);
     if (responseEvents.length > 0) {
       for (const responseEvent of responseEvents) {
-        const results = await Promise.allSettled(
-          pool.publish(relayUrl, responseEvent),
-        );
-        console.info(
-          `RES from ${nip19.npubEncode(responseEvent.pubkey)}\n${responseEvent.content}`,
-        );
-        console.log(results);
+        rxNostr.send(responseEvent).subscribe((packet) => {
+          console.info(
+            `RES from ${nip19.npubEncode(responseEvent.pubkey)}\n${responseEvent.content}`,
+          );
+          console.log(packet);
+        });
         await sleep(100);
       }
     }
   };
-  const oneose = async () => {
-    if (!isDebug) {
-      //起きた報告
-      const filters2 = [
-        {
-          kinds: [42],
-          '#p': [signermap.get(pubkey_jongbari)!.getPublicKey()],
-          limit: 1,
-        },
-      ];
-      let bootEvent: VerifiedEvent;
-      const onevent2 = async (ev2: NostrEvent) => {
-        bootEvent = signermap.get(pubkey_jongbari)!.finishEvent({
-          kind: 7,
-          tags: getTagsFav(ev2),
-          content: '🌅',
-          created_at: Math.floor(Date.now() / 1000),
-        });
-      };
-      const oneose2 = async () => {
-        const results = await Promise.allSettled(
-          pool.publish(relayUrl, bootEvent),
-        );
-        console.log(results);
-        sub2.close();
-      };
-      const sub2 = pool.subscribeMany(relayUrl, filters2, {
-        onevent: onevent2,
-        oneose: oneose2,
-      });
-      const getTagsFav = (event: NostrEvent): string[][] => {
-        const tagsFav: string[][] = [
-          ...event.tags.filter(
-            (tag) =>
-              tag.length >= 2 &&
-              (tag[0] === 'e' || (tag[0] === 'p' && tag[1] !== event.pubkey)),
-          ),
-          ['e', event.id, '', ''],
-          ['p', event.pubkey, ''],
-          ['k', String(event.kind)],
-        ];
-        return tagsFav;
-      };
-    }
-    //繋ぎっぱなしにする
-  };
 
-  const sub = pool.subscribeMany(relayUrl, filters, { onevent, oneose });
+  if (!isDebug) {
+    let bootEvent: VerifiedEvent;
+    const nextB = (packet: EventPacket) => {
+      bootEvent = signermap.get(pubkey_jongbari)!.finishEvent({
+        kind: 7,
+        tags: getTagsFav(packet.event),
+        content: '🌅',
+        created_at: Math.floor(Date.now() / 1000),
+      });
+    };
+    const complete = async () => {
+      //起きた報告
+      rxNostr.send(bootEvent).subscribe((packet) => {
+        console.info(
+          `RES from ${nip19.npubEncode(bootEvent.pubkey)}\n${bootEvent.content}`,
+        );
+        console.log(packet);
+      });
+    };
+    const subscriptionB = rxNostr
+      .use(rxReqB)
+      .pipe(uniq(flushes$))
+      .subscribe({ next: nextB, complete });
+    rxReqB.emit({
+      kinds: [42],
+      '#p': [signermap.get(pubkey_jongbari)!.getPublicKey()],
+      until: now,
+      limit: 1,
+    });
+    rxReqB.over();
+  }
+  //イベントの監視
+  const subscriptionF1 = rxNostr
+    .use(rxReqF1)
+    .pipe(uniq(flushes$))
+    .subscribe(nextF1);
+  rxReqF1.emit({
+    //do not sleep
+    kinds: [1],
+    since: now,
+  });
+  const subscriptionF2 = rxNostr
+    .use(rxReqF2)
+    .pipe(uniq(flushes$))
+    .subscribe(nextF2);
+  rxReqF2.emit({
+    kinds: [42],
+    '#p': Array.from(signermap.keys()),
+    since: now,
+  });
 };
 
 main().catch((e) => console.error(e));

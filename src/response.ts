@@ -5,7 +5,6 @@ import {
   type NostrEvent,
   type VerifiedEvent,
 } from 'nostr-tools/pure';
-import type { SimplePool } from 'nostr-tools/pool';
 import * as nip19 from 'nostr-tools/nip19';
 import { Mode, Signer, getTagsAirrep, getTagsReply } from './utils.js';
 import {
@@ -26,13 +25,12 @@ export const getResponseEvent = async (
   requestEvent: NostrEvent,
   signer: Signer,
   mode: Mode,
-  pool: SimplePool,
 ): Promise<VerifiedEvent[] | null> => {
   if (requestEvent.pubkey === signer.getPublicKey()) {
     //自分自身の投稿には反応しない
     return null;
   }
-  const res = await selectResponse(requestEvent, mode, signer, pool);
+  const res = await selectResponse(requestEvent, mode, signer);
   if (res === null) {
     return null;
   }
@@ -75,12 +73,11 @@ const selectResponse = async (
   event: NostrEvent,
   mode: Mode,
   signer: Signer,
-  pool: SimplePool,
 ): Promise<EventTemplate[] | null> => {
   if (!isAllowedToPost(event)) {
     return null;
   }
-  const res = await mode_select(event, mode, signer, pool);
+  const res = await mode_select(event, mode, signer);
   if (res === null) {
     return null;
   }
@@ -122,7 +119,6 @@ const getResmap = (
     mode: Mode,
     regstr: RegExp,
     signer: Signer,
-    pool: SimplePool,
   ) => [string, string[][]][] | null | Promise<null>,
 ][] => {
   const resmapServer: [
@@ -181,12 +177,11 @@ const mode_select = async (
   event: NostrEvent,
   mode: Mode,
   signer: Signer,
-  pool: SimplePool,
 ): Promise<[string, number, string[][]][] | null> => {
   const resmap = getResmap(mode);
   for (const [reg, func] of resmap) {
     if (reg.test(event.content)) {
-      const res = await func(event, mode, reg, signer, pool);
+      const res = await func(event, mode, reg, signer);
       if (res === null) {
         return null;
       }
