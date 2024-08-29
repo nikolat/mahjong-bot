@@ -150,7 +150,7 @@ const main = async () => {
           );
           console.log(packet);
         });
-        await sleep(100);
+        await sleep(200);
       }
     }
   };
