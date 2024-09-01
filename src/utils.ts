@@ -3,9 +3,19 @@ import { Buffer } from 'node:buffer';
 import {
   type EventTemplate,
   type NostrEvent,
+  type VerifiedEvent,
   finalizeEvent,
   getPublicKey,
 } from 'nostr-tools/pure';
+import * as nip19 from 'nostr-tools/nip19';
+import {
+  type EventPacket,
+  type RxNostr,
+  createRxBackwardReq,
+  uniq,
+} from 'rx-nostr';
+import type { Subject } from 'rxjs';
+import { mahjongChannelId } from './config.js';
 import { stringToArrayPlain } from './mjlib/mj_common.js';
 
 export const enum Mode {
@@ -37,6 +47,77 @@ export class Signer {
     return finalizeEvent(unsignedEvent, this.#seckey);
   };
 }
+
+export const getNowWithoutSecond = (): number => {
+  const d = new Date();
+  return Math.floor(
+    new Date(
+      d.getFullYear(),
+      d.getMonth(),
+      d.getDate(),
+      d.getHours(),
+      d.getMinutes(),
+    ).getTime() / 1000,
+  );
+};
+
+export const sendBootReaction = (
+  rxNostr: RxNostr,
+  flushes$: Subject<void>,
+  serverSigner: Signer,
+) => {
+  const rxReqB = createRxBackwardReq();
+  let bootEvent: VerifiedEvent;
+  const nextB = (packet: EventPacket) => {
+    bootEvent = serverSigner.finishEvent({
+      kind: 7,
+      tags: getTagsFav(packet.event),
+      content: '🌅',
+      created_at: Math.floor(Date.now() / 1000),
+    });
+  };
+  const complete = async () => {
+    //起きた報告
+    rxNostr.send(bootEvent).subscribe((packet) => {
+      console.info(
+        `RES from ${nip19.npubEncode(bootEvent.pubkey)}\n${bootEvent.content}`,
+      );
+      console.log(packet);
+    });
+  };
+  const subscriptionB = rxNostr
+    .use(rxReqB)
+    .pipe(uniq(flushes$))
+    .subscribe({ next: nextB, complete });
+  rxReqB.emit({
+    kinds: [42],
+    '#p': [serverSigner.getPublicKey()],
+    '#e': [mahjongChannelId],
+    until: Math.floor(Date.now() / 1000),
+    limit: 1,
+  });
+  rxReqB.over();
+};
+
+export const sendRequestPassport = (rxNostr: RxNostr, signer: Signer) => {
+  const npub_yabumi =
+    'npub1823chanrkmyrfgz2v4pwmu22s8fjy0s9ps7vnd68n7xgd8zr9neqlc2e5r';
+  const requestEvent: VerifiedEvent = signer.finishEvent({
+    kind: 42,
+    tags: [
+      ['e', mahjongChannelId, '', 'root'],
+      ['p', nip19.decode(npub_yabumi).data, ''],
+    ],
+    content: `nostr:${npub_yabumi} passport`,
+    created_at: Math.floor(Date.now() / 1000),
+  });
+  rxNostr.send(requestEvent).subscribe((packet) => {
+    console.info(
+      `RES from ${nip19.npubEncode(requestEvent.pubkey)}\n${requestEvent.content}`,
+    );
+    console.log(packet);
+  });
+};
 
 export const getTagsAirrep = (event: NostrEvent): string[][] => {
   if (event.kind === 1) {

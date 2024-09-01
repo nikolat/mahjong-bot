@@ -2,16 +2,21 @@ import type { VerifiedEvent } from 'nostr-tools/pure';
 import * as nip19 from 'nostr-tools/nip19';
 import WebSocket from 'ws';
 import {
-  createRxBackwardReq,
   createRxForwardReq,
   createRxNostr,
-  EventPacket,
   uniq,
+  type EventPacket,
 } from 'rx-nostr';
 import { verifier } from 'rx-nostr-crypto';
 import { Subject } from 'rxjs';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { getTagsFav, Mode, Signer } from './utils.js';
+import {
+  getNowWithoutSecond,
+  Mode,
+  sendBootReaction,
+  sendRequestPassport,
+  Signer,
+} from './utils.js';
 import {
   relayUrls,
   isDebug,
@@ -31,45 +36,27 @@ const main = async () => {
     ...serverSignerMap,
     ...playerSignerMap,
   ]);
-  //リレーに接続
   const rxNostr = createRxNostr({
     verifier,
     websocketCtor: WebSocket,
   });
   rxNostr.setDefaultRelays(relayUrls);
-  const rxReqB = createRxBackwardReq();
-  const rxReqF1 = createRxForwardReq();
-  const rxReqF2 = createRxForwardReq();
-  const now = Math.floor(Date.now() / 1000);
-  const flushes$ = new Subject<void>();
 
-  const d = new Date();
-  let lastKind1Time = Math.floor(
-    new Date(
-      d.getFullYear(),
-      d.getMonth(),
-      d.getDate(),
-      d.getHours(),
-      d.getMinutes(),
-    ).getTime() / 1000,
-  );
+  let lastKind1Time = getNowWithoutSecond();
   const nextF1 = async (packet: EventPacket) => {
-    const ev = packet.event;
     //do not sleep
-    const d2 = new Date();
-    const nowKind1Time = Math.floor(
-      new Date(
-        d2.getFullYear(),
-        d2.getMonth(),
-        d2.getDate(),
-        d2.getHours(),
-        d2.getMinutes(),
-      ).getTime() / 1000,
-    );
+    const nowKind1Time = getNowWithoutSecond();
     if (lastKind1Time < nowKind1Time) {
       lastKind1Time = nowKind1Time;
       const mes = `[${new Date(lastKind1Time * 1000).toISOString()}]`;
       console.log(mes);
+      const d = new Date();
+      if (d.getHours() === 0 && d.getMinutes() === 0) {
+        for (const signer of signerMap.values()) {
+          sendRequestPassport(rxNostr, signer);
+          await sleep(60 * 1000);
+        }
+      }
     }
   };
   const nextF2 = async (packet: EventPacket) => {
@@ -79,10 +66,7 @@ const main = async () => {
     const targetPubkeys = new Set(
       ev.tags
         .filter(
-          (tag) =>
-            tag.length >= 2 &&
-            tag[0] === 'p' &&
-            signerMap.has(tag[1]),
+          (tag) => tag.length >= 2 && tag[0] === 'p' && signerMap.has(tag[1]),
         )
         .map((tag) => tag[1]),
     );
@@ -118,40 +102,14 @@ const main = async () => {
     }
   };
 
+  const flushes$ = new Subject<void>();
   if (!isDebug) {
     const serverSigner = Array.from(serverSignerMap.values()).at(0)!;
-    let bootEvent: VerifiedEvent;
-    const nextB = (packet: EventPacket) => {
-      bootEvent = serverSigner.finishEvent({
-        kind: 7,
-        tags: getTagsFav(packet.event),
-        content: '🌅',
-        created_at: Math.floor(Date.now() / 1000),
-      });
-    };
-    const complete = async () => {
-      //起きた報告
-      rxNostr.send(bootEvent).subscribe((packet) => {
-        console.info(
-          `RES from ${nip19.npubEncode(bootEvent.pubkey)}\n${bootEvent.content}`,
-        );
-        console.log(packet);
-      });
-    };
-    const subscriptionB = rxNostr
-      .use(rxReqB)
-      .pipe(uniq(flushes$))
-      .subscribe({ next: nextB, complete });
-    rxReqB.emit({
-      kinds: [42],
-      '#p': [serverSigner.getPublicKey()],
-      '#e': [mahjongChannelId],
-      until: now,
-      limit: 1,
-    });
-    rxReqB.over();
+    sendBootReaction(rxNostr, flushes$, serverSigner);
   }
   //イベントの監視
+  const now = Math.floor(Date.now() / 1000);
+  const rxReqF1 = createRxForwardReq();
   const subscriptionF1 = rxNostr
     .use(rxReqF1)
     .pipe(uniq(flushes$))
@@ -161,6 +119,7 @@ const main = async () => {
     kinds: [1],
     since: now,
   });
+  const rxReqF2 = createRxForwardReq();
   const subscriptionF2 = rxNostr
     .use(rxReqF2)
     .pipe(uniq(flushes$))
