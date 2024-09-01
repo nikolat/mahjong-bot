@@ -1,11 +1,6 @@
-import { type VerifiedEvent, getPublicKey } from 'nostr-tools/pure';
+import type { VerifiedEvent } from 'nostr-tools/pure';
 import * as nip19 from 'nostr-tools/nip19';
 import WebSocket from 'ws';
-import { setTimeout as sleep } from 'node:timers/promises';
-import { getTagsFav, Mode, Signer } from './utils.js';
-import { relayUrls, getNsecs, isDebug } from './config.js';
-import { getResponseEvent } from './response.js';
-import { page } from './page.js';
 import {
   createRxBackwardReq,
   createRxForwardReq,
@@ -15,48 +10,27 @@ import {
 } from 'rx-nostr';
 import { verifier } from 'rx-nostr-crypto';
 import { Subject } from 'rxjs';
+import { setTimeout as sleep } from 'node:timers/promises';
+import { getTagsFav, Mode, Signer } from './utils.js';
+import {
+  relayUrls,
+  isDebug,
+  getServerSignerMap,
+  getPlayerSignerMap,
+  mahjongChannelId,
+} from './config.js';
+import { getResponseEvent } from './response.js';
+import { page } from './page.js';
 
 if (!isDebug) page();
 
 const main = async () => {
-  //署名用秘密鍵を準備
-  const nsecs: (string | undefined)[] = getNsecs();
-  const [
-    nsec_jongbari,
-    nsec_rinrin,
-    nsec_chunchun,
-    nsec_whanwhan,
-    nsec_bee,
-    nsec_unyu,
-  ] = nsecs;
-  if (nsecs.includes(undefined)) {
-    throw Error('NOSTR_PRIVATE_KEY is undefined');
-  }
-  const signermap = new Map<string, Signer>();
-  for (const nsec of nsecs) {
-    const dr = nip19.decode(nsec!);
-    if (dr.type !== 'nsec') {
-      throw Error('NOSTR_PRIVATE_KEY is not `nsec`');
-    }
-    const seckey = dr.data;
-    const signer = new Signer(seckey);
-    signermap.set(signer.getPublicKey(), signer);
-  }
-  const pubkey_jongbari = getPublicKey(
-    nip19.decode(nsec_jongbari!).data as Uint8Array,
-  );
-  const pubkey_rinrin = getPublicKey(
-    nip19.decode(nsec_rinrin!).data as Uint8Array,
-  );
-  const pubkey_chunchun = getPublicKey(
-    nip19.decode(nsec_chunchun!).data as Uint8Array,
-  );
-  const pubkey_whanwhan = getPublicKey(
-    nip19.decode(nsec_whanwhan!).data as Uint8Array,
-  );
-  const pubkey_bee = getPublicKey(nip19.decode(nsec_bee!).data as Uint8Array);
-  const pubkey_unyu = getPublicKey(nip19.decode(nsec_unyu!).data as Uint8Array);
-
+  const serverSignerMap = getServerSignerMap();
+  const playerSignerMap = getPlayerSignerMap();
+  const signerMap = new Map<string, Signer>([
+    ...serverSignerMap,
+    ...playerSignerMap,
+  ]);
   //リレーに接続
   const rxNostr = createRxNostr({
     verifier,
@@ -108,28 +82,19 @@ const main = async () => {
           (tag) =>
             tag.length >= 2 &&
             tag[0] === 'p' &&
-            Array.from(signermap.values())
-              .map((signer) => signer.getPublicKey())
-              .includes(tag[1]),
+            signerMap.has(tag[1]),
         )
         .map((tag) => tag[1]),
     );
     for (const pubkey of targetPubkeys) {
       let rs: VerifiedEvent[] | null;
-      const mode =
-        pubkey === pubkey_jongbari
-          ? Mode.Server
-          : [
-                pubkey_rinrin,
-                pubkey_chunchun,
-                pubkey_whanwhan,
-                pubkey_bee,
-                pubkey_unyu,
-              ].includes(pubkey)
-            ? Mode.Client
-            : Mode.Unknown;
+      const mode = serverSignerMap.has(pubkey)
+        ? Mode.Server
+        : playerSignerMap.has(pubkey)
+          ? Mode.Client
+          : Mode.Unknown;
       try {
-        rs = await getResponseEvent(ev, signermap.get(pubkey)!, mode);
+        rs = await getResponseEvent(ev, signerMap.get(pubkey)!, mode);
       } catch (error) {
         console.error(error);
         return;
@@ -142,23 +107,22 @@ const main = async () => {
     console.info('==========');
     console.info(new Date().toISOString());
     console.info(`REQ from ${nip19.npubEncode(ev.pubkey)}\n${ev.content}`);
-    if (responseEvents.length > 0) {
-      for (const responseEvent of responseEvents) {
-        rxNostr.send(responseEvent).subscribe((packet) => {
-          console.info(
-            `RES from ${nip19.npubEncode(responseEvent.pubkey)}\n${responseEvent.content}`,
-          );
-          console.log(packet);
-        });
-        await sleep(200);
-      }
+    for (const responseEvent of responseEvents) {
+      rxNostr.send(responseEvent).subscribe((packet) => {
+        console.info(
+          `RES from ${nip19.npubEncode(responseEvent.pubkey)}\n${responseEvent.content}`,
+        );
+        console.log(packet);
+      });
+      await sleep(200);
     }
   };
 
   if (!isDebug) {
+    const serverSigner = Array.from(serverSignerMap.values()).at(0)!;
     let bootEvent: VerifiedEvent;
     const nextB = (packet: EventPacket) => {
-      bootEvent = signermap.get(pubkey_jongbari)!.finishEvent({
+      bootEvent = serverSigner.finishEvent({
         kind: 7,
         tags: getTagsFav(packet.event),
         content: '🌅',
@@ -180,7 +144,8 @@ const main = async () => {
       .subscribe({ next: nextB, complete });
     rxReqB.emit({
       kinds: [42],
-      '#p': [signermap.get(pubkey_jongbari)!.getPublicKey()],
+      '#p': [serverSigner.getPublicKey()],
+      '#e': [mahjongChannelId],
       until: now,
       limit: 1,
     });
@@ -202,7 +167,8 @@ const main = async () => {
     .subscribe(nextF2);
   rxReqF2.emit({
     kinds: [42],
-    '#p': Array.from(signermap.keys()),
+    '#p': Array.from(signerMap.keys()),
+    '#e': [mahjongChannelId],
     since: now,
   });
 };
