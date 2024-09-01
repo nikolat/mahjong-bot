@@ -74,7 +74,16 @@ export const res_s_status_call = (
       `nostr:${nip19.npubEncode(players[i])} ${dSeki.get(players[i])} ${arScore[i]}点`,
     );
     a.push(tehaiToEmoji(arTehai[i]));
-    a.push(tehaiToEmoji(arKawa[i].join('')));
+    a.push(
+      arKawa[i]
+        .map(
+          (pai, index) =>
+            (arRichiJunme[i] === index
+              ? `:${convertEmoji('stick1000')}:`
+              : '') + tehaiToEmoji(pai),
+        )
+        .join(''),
+    );
     emojiHai = [...emojiHai, ...stringToArrayPlain(arTehai[i]), ...arKawa[i]];
   }
   const content = a.join('\n');
