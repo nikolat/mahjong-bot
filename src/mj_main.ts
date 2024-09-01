@@ -27,6 +27,7 @@ import {
 import { getMachi } from './mjlib/mj_machi.js';
 import {
   convertEmoji,
+  getEmojiTag,
   getScoreAdd,
   getScoreAddWithPao,
   getTagsAirrep,
@@ -62,8 +63,8 @@ export const res_s_status_call = (
   event: NostrEvent,
 ): [string, string[][]][] => {
   const a: string[] = [
-    `${arBafu[bafu]}${kyoku}局 ${tsumibou}本場 供託${kyotaku * 1000}点`,
-    `ドラ表示牌 ${tehaiToEmoji(dorahyouji)}`,
+    `${arBafu[bafu]}${kyoku}局 :${convertEmoji('stick100')}:x${tsumibou} :${convertEmoji('stick1000')}:x${kyotaku}`,
+    `${tehaiToEmoji(dorahyouji)}${`:${convertEmoji('back')}:`.repeat((10 - dorahyouji.length) / 2)}`,
     '',
   ];
   const dSeki = getSeki(oyaIndex);
@@ -77,7 +78,13 @@ export const res_s_status_call = (
     emojiHai = [...emojiHai, ...stringToArrayPlain(arTehai[i]), ...arKawa[i]];
   }
   const content = a.join('\n');
-  const tags = [...getTagsAirrep(event), ...getTagsEmoji(emojiHai.join(''))];
+  const tags = [
+    ...getTagsAirrep(event),
+    getEmojiTag('stick100'),
+    getEmojiTag('stick1000'),
+    getEmojiTag('back'),
+    ...getTagsEmoji(emojiHai.join('')),
+  ];
   return [[content, tags]];
 };
 

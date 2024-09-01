@@ -344,14 +344,17 @@ export const getTagsFav = (event: NostrEvent): string[][] => {
 
 export const getTagsEmoji = (tehai: string): string[][] => {
   const pi = stringToArrayPlain(tehai);
-  return Array.from(new Set(pi)).map((pi) => [
-    'emoji',
-    convertEmoji(pi),
-    getEmojiUrl(pi),
-  ]);
+  return Array.from(new Set(pi)).map((pi) => getEmojiTag(pi));
+};
+
+export const getEmojiTag = (pi: string): string[] => {
+  return ['emoji', convertEmoji(pi), getEmojiUrl(pi)];
 };
 
 export const convertEmoji = (pai: string) => {
+  if (pai === 'back') return 'mahjong_back';
+  if (pai === 'stick100') return 'mahjong_stick100';
+  if (pai === 'stick1000') return 'mahjong_stick1000';
   if (['m', 'p', 's'].includes(pai.at(1) ?? '')) {
     return `mahjong_${pai.at(1)}${pai.at(0)}`;
   } else if (pai.at(1) === 'z') {
@@ -417,6 +420,9 @@ const awayuki_mahjong_emojis: any = {
   mahjong_white: 'https://awayuki.github.io/emoji/mahjong-white.png',
   mahjong_green: 'https://awayuki.github.io/emoji/mahjong-green.png',
   mahjong_red: 'https://awayuki.github.io/emoji/mahjong-red.png',
+  mahjong_back: 'https://awayuki.github.io/emoji/mahjong-back.png',
+  mahjong_stick100: 'https://awayuki.github.io/emoji/mahjong-stick100.png',
+  mahjong_stick1000: 'https://awayuki.github.io/emoji/mahjong-stick1000.png',
 };
 
 export const getScoreAddWithPao = (
