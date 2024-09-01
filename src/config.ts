@@ -19,6 +19,13 @@ const mahjongPlayerNsecs: (string | undefined)[] = [
   process.env.NOSTR_PRIVATE_KEY_BEE,
   process.env.NOSTR_PRIVATE_KEY_UNYU,
 ];
+export const nostrWalletConnect: string | undefined =
+  process.env.NOSTR_WALLET_CONNECT;
+
+export const pubkeysOfRelayOwnerToZap: string[] = [
+  'npub1vd9ar8jusldjze24eq2tlz8xdt8pwkq99ydxh6gtzkkrkgj8m2dsndwen9',
+  'npub1kurad0nlm8xfuxhws05pcwv5z4k0ea6da4dsjygexr77a666pssqsftsm7',
+].map((npub) => nip19.decode(npub).data as string);
 
 export const getServerSignerMap = (): Map<string, Signer> => {
   return getSignerMap([mahjongServerNsec]);

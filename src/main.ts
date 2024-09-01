@@ -16,6 +16,7 @@ import {
   sendBootReaction,
   sendRequestPassport,
   Signer,
+  zapSplit,
 } from './utils.js';
 import {
   relayUrls,
@@ -101,35 +102,57 @@ const main = async () => {
       await sleep(200);
     }
   };
+  const nextF3 = (packet: EventPacket) => {
+    console.log('[Zap]');
+    console.log(packet);
+    zapSplit(rxNostr, packet.event, serverSigner);
+  };
 
-  const flushes$ = new Subject<void>();
+  const nextF = (packet: EventPacket) => {
+    switch (packet.event.kind) {
+      case 1:
+        nextF1(packet);
+        break;
+      case 42:
+        nextF2(packet);
+        break;
+      case 9735:
+        nextF3(packet);
+        break;
+      default:
+        break;
+    }
+  };
+
+  const serverSigner = Array.from(serverSignerMap.values()).at(0)!;
   if (!isDebug) {
-    const serverSigner = Array.from(serverSignerMap.values()).at(0)!;
-    sendBootReaction(rxNostr, flushes$, serverSigner);
+    sendBootReaction(rxNostr, serverSigner);
   }
   //イベントの監視
+  const flushes$ = new Subject<void>();
   const now = Math.floor(Date.now() / 1000);
-  const rxReqF1 = createRxForwardReq();
-  const subscriptionF1 = rxNostr
-    .use(rxReqF1)
+  const rxReqF = createRxForwardReq();
+  const subscriptionF = rxNostr
+    .use(rxReqF)
     .pipe(uniq(flushes$))
-    .subscribe(nextF1);
-  rxReqF1.emit({
-    //do not sleep
-    kinds: [1],
-    since: now,
-  });
-  const rxReqF2 = createRxForwardReq();
-  const subscriptionF2 = rxNostr
-    .use(rxReqF2)
-    .pipe(uniq(flushes$))
-    .subscribe(nextF2);
-  rxReqF2.emit({
-    kinds: [42],
-    '#p': Array.from(signerMap.keys()),
-    '#e': [mahjongChannelId],
-    since: now,
-  });
+    .subscribe(nextF);
+  rxReqF.emit([
+    {
+      kinds: [1],
+      since: now,
+    },
+    {
+      kinds: [42],
+      '#p': Array.from(signerMap.keys()),
+      '#e': [mahjongChannelId],
+      since: now,
+    },
+    {
+      kinds: [9735],
+      '#p': [serverSigner.getPublicKey()],
+      since: now,
+    },
+  ]);
 };
 
 main().catch((e) => console.error(e));

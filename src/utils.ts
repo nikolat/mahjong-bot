@@ -6,16 +6,20 @@ import {
   type VerifiedEvent,
   finalizeEvent,
   getPublicKey,
+  verifyEvent,
 } from 'nostr-tools/pure';
+import type { Filter } from 'nostr-tools/filter';
 import * as nip19 from 'nostr-tools/nip19';
+import * as nip57 from 'nostr-tools/nip57';
+import { nip47 } from 'nostr-tools';
+import { hexToBytes } from '@noble/hashes/utils';
+import { type EventPacket, type RxNostr, createRxBackwardReq } from 'rx-nostr';
 import {
-  type EventPacket,
-  type RxNostr,
-  createRxBackwardReq,
-  uniq,
-} from 'rx-nostr';
-import type { Subject } from 'rxjs';
-import { mahjongChannelId } from './config.js';
+  mahjongChannelId,
+  nostrWalletConnect,
+  pubkeysOfRelayOwnerToZap,
+  relayUrls,
+} from './config.js';
 import { stringToArrayPlain } from './mjlib/mj_common.js';
 
 export const enum Mode {
@@ -61,11 +65,7 @@ export const getNowWithoutSecond = (): number => {
   );
 };
 
-export const sendBootReaction = (
-  rxNostr: RxNostr,
-  flushes$: Subject<void>,
-  serverSigner: Signer,
-) => {
+export const sendBootReaction = (rxNostr: RxNostr, serverSigner: Signer) => {
   const rxReqB = createRxBackwardReq();
   let bootEvent: VerifiedEvent;
   const nextB = (packet: EventPacket) => {
@@ -87,7 +87,6 @@ export const sendBootReaction = (
   };
   const subscriptionB = rxNostr
     .use(rxReqB)
-    .pipe(uniq(flushes$))
     .subscribe({ next: nextB, complete });
   rxReqB.emit({
     kinds: [42],
@@ -116,6 +115,180 @@ export const sendRequestPassport = (rxNostr: RxNostr, signer: Signer) => {
       `RES from ${nip19.npubEncode(requestEvent.pubkey)}\n${requestEvent.content}`,
     );
     console.log(packet);
+  });
+};
+
+export const zapSplit = async (
+  rxNostr: RxNostr,
+  event: NostrEvent,
+  signer: Signer,
+): Promise<void> => {
+  //kind9734の検証
+  let event9734;
+  try {
+    event9734 = JSON.parse(
+      event.tags
+        .find((tag: string[]) => tag.length >= 2 && tag[0] === 'description')
+        ?.at(1) ?? '{}',
+    );
+  } catch (error) {
+    console.warn(error);
+    return;
+  }
+  if (!verifyEvent(event9734)) {
+    console.warn('Invalid kind 9734 event');
+    return;
+  }
+  //kind9735の検証
+  const evKind0: NostrEvent | null = await getKind0(
+    rxNostr,
+    signer.getPublicKey(),
+  );
+  if (evKind0 === null) {
+    console.warn('Cannot get kind 0 event');
+    return;
+  }
+  const lud16: string = JSON.parse(evKind0.content).lud16;
+  const m = lud16.match(/^([^@]+)@([^@]+)$/);
+  if (m === null) {
+    console.warn('Invalid lud16 field');
+    return;
+  }
+  const url = `https://${m[2]}/.well-known/lnurlp/${m[1]}`;
+  const response = await fetch(url);
+  const json: any = await response.json();
+  const nostrPubkey: string = json.nostrPubkey;
+  if (!nostrPubkey) {
+    console.warn('nostrPubkey does not exist');
+    return;
+  }
+  if (event.pubkey !== nostrPubkey) {
+    console.warn('Fake Zap');
+    return;
+  }
+  //Zap Split
+  const amountStr = event9734.tags
+    .find((tag: string[]) => tag.length >= 2 && tag[0] === 'amount')
+    ?.at(1);
+  if (amountStr === undefined || !/^\d+$/.test(amountStr)) {
+    console.warn('Invalid an amount');
+    return;
+  }
+  const amount = parseInt(amountStr);
+  if (amount < 2 * 1000) {
+    console.log('Too small an amount');
+    return;
+  }
+  const sats = Math.floor(amount / (1000 * pubkeysOfRelayOwnerToZap.length));
+  for (const pubkey of pubkeysOfRelayOwnerToZap) {
+    try {
+      await zapByNIP47(rxNostr, pubkey, signer, sats, 'for your relay');
+    } catch (error) {
+      console.warn(error);
+    }
+  }
+};
+
+const getKind0 = async (
+  rxNostr: RxNostr,
+  pubkey: string,
+): Promise<NostrEvent | null> => {
+  const eventsKind0: NostrEvent[] = await getGeneralEvents(rxNostr, [
+    {
+      kinds: [0],
+      authors: [pubkey],
+      until: Math.floor(Date.now() / 1000),
+    },
+  ]);
+  if (eventsKind0.length === 0) {
+    return null;
+  }
+  const evKind0: NostrEvent = eventsKind0.reduce(
+    (accumulator: NostrEvent, currentValue: NostrEvent) => {
+      if (accumulator.created_at < currentValue.created_at) {
+        return currentValue;
+      } else {
+        return accumulator;
+      }
+    },
+  );
+  return evKind0;
+};
+
+const zapByNIP47 = async (
+  rxNostr: RxNostr,
+  pubkey: string,
+  signer: Signer,
+  sats: number,
+  zapComment: string,
+): Promise<void> => {
+  const wc = nostrWalletConnect;
+  if (wc === undefined) {
+    throw Error('NOSTR_WALLET_CONNECT is undefined');
+  }
+  const { pathname, hostname, searchParams } = new URL(wc);
+  const walletPubkey = pathname || hostname;
+  const walletRelay = searchParams.get('relay');
+  const walletSeckey = searchParams.get('secret');
+  if (
+    walletPubkey.length === 0 ||
+    walletRelay === null ||
+    walletSeckey === null
+  ) {
+    throw Error('NOSTR_WALLET_CONNECT is invalid connection string');
+  }
+  const evKind0 = await getKind0(rxNostr, pubkey);
+  if (evKind0 === null) {
+    throw Error('Cannot get kind 0 event');
+  }
+  const zapEndpoint = await nip57.getZapEndpoint(evKind0);
+  if (zapEndpoint === null) {
+    throw Error('Cannot get zap endpoint');
+  }
+  const amount = sats * 1000;
+  const zapRequest = nip57.makeZapRequest({
+    profile: pubkey,
+    event: null,
+    amount,
+    comment: zapComment,
+    relays: relayUrls,
+  });
+  const zapRequestEvent = signer.finishEvent(zapRequest);
+  const encoded = encodeURI(JSON.stringify(zapRequestEvent));
+
+  const url = `${zapEndpoint}?amount=${amount}&nostr=${encoded}`;
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw Error('Cannot get invoice');
+  }
+  const { pr: invoice } = await response.json();
+
+  const ev: VerifiedEvent = await nip47.makeNwcRequestEvent(
+    walletPubkey,
+    hexToBytes(walletSeckey),
+    invoice,
+  );
+  rxNostr.send(ev, { on: { relays: [walletRelay] } });
+};
+
+const getGeneralEvents = (
+  rxNostr: RxNostr,
+  filters: Filter[],
+): Promise<NostrEvent[]> => {
+  return new Promise((resolve) => {
+    const events: NostrEvent[] = [];
+    const rxReq = createRxBackwardReq();
+    rxNostr.use(rxReq).subscribe({
+      next: (packet: EventPacket) => {
+        events.push(packet.event);
+      },
+      complete: () => {
+        resolve(events);
+      },
+    });
+    rxReq.emit(filters);
+    rxReq.over();
   });
 };
 
