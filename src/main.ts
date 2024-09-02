@@ -52,7 +52,11 @@ const main = async () => {
       const mes = `[${new Date(lastKind1Time * 1000).toISOString()}]`;
       console.log(mes);
       const d = new Date();
-      if (d.getHours() === 0 && d.getMinutes() === 0) {
+      if (
+        [1, 6].includes(d.getDate() % 10) &&
+        d.getHours() === 0 &&
+        d.getMinutes() === 0
+      ) {
         for (const signer of signerMap.values()) {
           sendRequestPassport(rxNostr, signer);
           await sleep(60 * 1000);
