@@ -20,6 +20,7 @@ import {
   res_s_sutehai_call,
   startKyoku,
 } from './mj_main.js';
+import { getServerSignerMap } from './config.js';
 
 export const getResponseEvent = async (
   requestEvent: NostrEvent,
@@ -74,9 +75,6 @@ const selectResponse = async (
   mode: Mode,
   signer: Signer,
 ): Promise<EventTemplate[] | null> => {
-  if (!isAllowedToPost(event)) {
-    return null;
-  }
   const res = await mode_select(event, mode, signer);
   if (res === null) {
     return null;
@@ -88,26 +86,6 @@ const selectResponse = async (
     templateEvents.push(templateEvent);
   }
   return templateEvents;
-};
-
-const isAllowedToPost = (event: NostrEvent) => {
-  const allowedChannel: string[] = [
-    'c8d5c2709a5670d6f621ac8020ac3e4fc3057a4961a15319f7c0818309407723', //Nostr麻雀開発部
-    'be8e52c0c70ec5390779202b27d9d6fc7286d0e9a2bc91c001d6838d40bafa4a', //Nostr伺か部
-  ];
-  if (event.kind === 1) {
-    return true;
-  } else if (event.kind === 42) {
-    const tagRoot = event.tags.find(
-      (tag) => tag.length >= 4 && tag[0] === 'e' && tag[3] === 'root',
-    );
-    if (tagRoot !== undefined) {
-      return allowedChannel.includes(tagRoot[1]);
-    } else {
-      throw new TypeError('root is not found');
-    }
-  }
-  throw new TypeError(`kind ${event.kind} is not supported`);
 };
 
 const getResmap = (
@@ -309,24 +287,22 @@ const res_s_naku = (
   return res_s_naku_call(event, action, pai1, pai2);
 };
 
+const serverPubkey = Array.from(getServerSignerMap().keys()).at(0)!;
+
 const res_c_join = (event: NostrEvent): [string, string[][]][] => {
-  const npub_jongbari =
-    'npub1j0ng5hmm7mf47r939zqkpepwekenj6uqhd5x555pn80utevvavjsfgqem2';
   return [
     [
-      `nostr:${npub_jongbari} join`,
-      [...getTagsAirrep(event), ['p', nip19.decode(npub_jongbari).data, '']],
+      `nostr:${nip19.npubEncode(serverPubkey)} join`,
+      [...getTagsAirrep(event), ['p', serverPubkey, '']],
     ],
   ];
 };
 
 const res_c_gamestart = (event: NostrEvent): [string, string[][]][] => {
-  const npub_jongbari =
-    'npub1j0ng5hmm7mf47r939zqkpepwekenj6uqhd5x555pn80utevvavjsfgqem2';
   return [
     [
-      `nostr:${npub_jongbari} gamestart`,
-      [...getTagsAirrep(event), ['p', nip19.decode(npub_jongbari).data, '']],
+      `nostr:${nip19.npubEncode(serverPubkey)} gamestart`,
+      [...getTagsAirrep(event), ['p', serverPubkey, '']],
     ],
   ];
 };
