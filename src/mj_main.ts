@@ -953,7 +953,8 @@ const sendNextTurn = (
         `${tehaiToEmoji(arKawa[i].join(''))}\n`;
       emojiHai = [
         ...emojiHai,
-        ...stringToArrayPlain(arTehai[i] + arKawa[i].join('')),
+        ...stringToArrayPlain(arTehai[i]),
+        ...stringToArrayPlain(arKawa[i].join('')),
       ];
     }
     const tags = [...getTagsAirrep(event), ...getTagsEmoji(emojiHai.join(''))];
