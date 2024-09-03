@@ -311,7 +311,7 @@ export const getTagsAirrep = (event: NostrEvent): string[][] => {
 export const getTagsReply = (event: NostrEvent): string[][] => {
   const tagsReply: string[][] = [];
   const tagRoot = event.tags.find(
-    (tag) => tag.length >= 3 && tag[0] === 'e' && tag[3] === 'root',
+    (tag) => tag.length >= 4 && tag[0] === 'e' && tag[3] === 'root',
   );
   if (tagRoot !== undefined) {
     tagsReply.push(tagRoot);
