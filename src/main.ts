@@ -97,6 +97,9 @@ const main = async () => {
     console.info(new Date().toISOString());
     console.info(`REQ from ${nip19.npubEncode(ev.pubkey)}\n${ev.content}`);
     for (const responseEvent of responseEvents) {
+      while (Math.floor(Date.now() / 1000) < responseEvent.created_at) {
+        await sleep(200);
+      }
       rxNostr.send(responseEvent).subscribe((packet) => {
         console.info(
           `RES from ${nip19.npubEncode(responseEvent.pubkey)}\n${responseEvent.content}`,
