@@ -224,7 +224,7 @@ export const startKyoku = (event: NostrEvent): [string, string[][]][] => {
   dResponseNeed = new Map<string, string>(players.map((p) => [p, '']));
   let s: string = '';
   //kyokustart通知
-  const content = `${players.map((pubkey) => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} #kyokustart NOTIFY kyokustart ${arBafu[bafu]} nostr:${nip19.npubEncode(players[oyaIndex])} ${tsumibou} ${kyotaku}`;
+  const content = `${players.map((pubkey) => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} #kyokustart NOTIFY kyokustart ${arBafu[bafu]} nostr:${nip19.npubEncode(players[oyaIndex])} ${tsumibou} ${1000 * kyotaku}`;
   const tags = [
     ...getTagsAirrep(event),
     ...players.map((pubkey) => ['p', pubkey, '']),
