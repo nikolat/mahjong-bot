@@ -1,25 +1,13 @@
 import type { Readable } from 'node:stream';
 import { Buffer } from 'node:buffer';
-import {
-  type EventTemplate,
-  type NostrEvent,
-  type VerifiedEvent,
-  finalizeEvent,
-  getPublicKey,
-  verifyEvent,
-} from 'nostr-tools/pure';
+import { type EventTemplate, type NostrEvent, type VerifiedEvent, finalizeEvent, getPublicKey, verifyEvent } from 'nostr-tools/pure';
 import type { Filter } from 'nostr-tools/filter';
 import * as nip19 from 'nostr-tools/nip19';
 import * as nip57 from 'nostr-tools/nip57';
 import { nip47 } from 'nostr-tools';
 import { hexToBytes } from '@noble/hashes/utils';
 import { type EventPacket, type RxNostr, createRxBackwardReq } from 'rx-nostr';
-import {
-  mahjongChannelId,
-  nostrWalletConnect,
-  pubkeysOfRelayOwnerToZap,
-  relayUrls,
-} from './config.js';
+import { mahjongChannelId, nostrWalletConnect, pubkeysOfRelayOwnerToZap, relayUrls } from './config.js';
 import { stringToArrayPlain } from './mjlib/mj_common.js';
 
 export const enum Mode {
@@ -54,15 +42,7 @@ export class Signer {
 
 export const getNowWithoutSecond = (): number => {
   const d = new Date();
-  return Math.floor(
-    new Date(
-      d.getFullYear(),
-      d.getMonth(),
-      d.getDate(),
-      d.getHours(),
-      d.getMinutes(),
-    ).getTime() / 1000,
-  );
+  return Math.floor(new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes()).getTime() / 1000);
 };
 
 export const sendBootReaction = (rxNostr: RxNostr, serverSigner: Signer) => {
@@ -79,15 +59,11 @@ export const sendBootReaction = (rxNostr: RxNostr, serverSigner: Signer) => {
   const complete = async () => {
     //起きた報告
     rxNostr.send(bootEvent).subscribe((packet) => {
-      console.info(
-        `RES from ${nip19.npubEncode(bootEvent.pubkey)}\n${bootEvent.content}`,
-      );
+      console.info(`RES from ${nip19.npubEncode(bootEvent.pubkey)}\n${bootEvent.content}`);
       console.log(packet);
     });
   };
-  const subscriptionB = rxNostr
-    .use(rxReqB)
-    .subscribe({ next: nextB, complete });
+  const subscriptionB = rxNostr.use(rxReqB).subscribe({ next: nextB, complete });
   rxReqB.emit({
     kinds: [42],
     '#p': [serverSigner.getPublicKey()],
@@ -99,8 +75,7 @@ export const sendBootReaction = (rxNostr: RxNostr, serverSigner: Signer) => {
 };
 
 export const sendRequestPassport = (rxNostr: RxNostr, signer: Signer) => {
-  const npub_yabumi =
-    'npub1823chanrkmyrfgz2v4pwmu22s8fjy0s9ps7vnd68n7xgd8zr9neqlc2e5r';
+  const npub_yabumi = 'npub1823chanrkmyrfgz2v4pwmu22s8fjy0s9ps7vnd68n7xgd8zr9neqlc2e5r';
   const requestEvent: VerifiedEvent = signer.finishEvent({
     kind: 42,
     tags: [
@@ -111,26 +86,16 @@ export const sendRequestPassport = (rxNostr: RxNostr, signer: Signer) => {
     created_at: Math.floor(Date.now() / 1000),
   });
   rxNostr.send(requestEvent).subscribe((packet) => {
-    console.info(
-      `RES from ${nip19.npubEncode(requestEvent.pubkey)}\n${requestEvent.content}`,
-    );
+    console.info(`RES from ${nip19.npubEncode(requestEvent.pubkey)}\n${requestEvent.content}`);
     console.log(packet);
   });
 };
 
-export const zapSplit = async (
-  rxNostr: RxNostr,
-  event: NostrEvent,
-  signer: Signer,
-): Promise<void> => {
+export const zapSplit = async (rxNostr: RxNostr, event: NostrEvent, signer: Signer): Promise<void> => {
   //kind9734の検証
   let event9734;
   try {
-    event9734 = JSON.parse(
-      event.tags
-        .find((tag: string[]) => tag.length >= 2 && tag[0] === 'description')
-        ?.at(1) ?? '{}',
-    );
+    event9734 = JSON.parse(event.tags.find((tag: string[]) => tag.length >= 2 && tag[0] === 'description')?.at(1) ?? '{}');
   } catch (error) {
     console.warn(error);
     return;
@@ -140,10 +105,7 @@ export const zapSplit = async (
     return;
   }
   //kind9735の検証
-  const evKind0: NostrEvent | null = await getKind0(
-    rxNostr,
-    signer.getPublicKey(),
-  );
+  const evKind0: NostrEvent | null = await getKind0(rxNostr, signer.getPublicKey());
   if (evKind0 === null) {
     console.warn('Cannot get kind 0 event');
     return;
@@ -167,9 +129,7 @@ export const zapSplit = async (
     return;
   }
   //Zap Split
-  const amountStr = event9734.tags
-    .find((tag: string[]) => tag.length >= 2 && tag[0] === 'amount')
-    ?.at(1);
+  const amountStr = event9734.tags.find((tag: string[]) => tag.length >= 2 && tag[0] === 'amount')?.at(1);
   if (amountStr === undefined || !/^\d+$/.test(amountStr)) {
     console.warn('Invalid an amount');
     return;
@@ -189,10 +149,7 @@ export const zapSplit = async (
   }
 };
 
-const getKind0 = async (
-  rxNostr: RxNostr,
-  pubkey: string,
-): Promise<NostrEvent | null> => {
+const getKind0 = async (rxNostr: RxNostr, pubkey: string): Promise<NostrEvent | null> => {
   const eventsKind0: NostrEvent[] = await getGeneralEvents(rxNostr, [
     {
       kinds: [0],
@@ -203,25 +160,17 @@ const getKind0 = async (
   if (eventsKind0.length === 0) {
     return null;
   }
-  const evKind0: NostrEvent = eventsKind0.reduce(
-    (accumulator: NostrEvent, currentValue: NostrEvent) => {
-      if (accumulator.created_at < currentValue.created_at) {
-        return currentValue;
-      } else {
-        return accumulator;
-      }
-    },
-  );
+  const evKind0: NostrEvent = eventsKind0.reduce((accumulator: NostrEvent, currentValue: NostrEvent) => {
+    if (accumulator.created_at < currentValue.created_at) {
+      return currentValue;
+    } else {
+      return accumulator;
+    }
+  });
   return evKind0;
 };
 
-const zapByNIP47 = async (
-  rxNostr: RxNostr,
-  pubkey: string,
-  signer: Signer,
-  sats: number,
-  zapComment: string,
-): Promise<void> => {
+const zapByNIP47 = async (rxNostr: RxNostr, pubkey: string, signer: Signer, sats: number, zapComment: string): Promise<void> => {
   const wc = nostrWalletConnect;
   if (wc === undefined) {
     throw Error('NOSTR_WALLET_CONNECT is undefined');
@@ -230,11 +179,7 @@ const zapByNIP47 = async (
   const walletPubkey = pathname || hostname;
   const walletRelay = searchParams.get('relay');
   const walletSeckey = searchParams.get('secret');
-  if (
-    walletPubkey.length === 0 ||
-    walletRelay === null ||
-    walletSeckey === null
-  ) {
+  if (walletPubkey.length === 0 || walletRelay === null || walletSeckey === null) {
     throw Error('NOSTR_WALLET_CONNECT is invalid connection string');
   }
   const evKind0 = await getKind0(rxNostr, pubkey);
@@ -264,18 +209,11 @@ const zapByNIP47 = async (
   }
   const { pr: invoice } = await response.json();
 
-  const ev: VerifiedEvent = await nip47.makeNwcRequestEvent(
-    walletPubkey,
-    hexToBytes(walletSeckey),
-    invoice,
-  );
+  const ev: VerifiedEvent = await nip47.makeNwcRequestEvent(walletPubkey, hexToBytes(walletSeckey), invoice);
   rxNostr.send(ev, { on: { relays: [walletRelay] } });
 };
 
-const getGeneralEvents = (
-  rxNostr: RxNostr,
-  filters: Filter[],
-): Promise<NostrEvent[]> => {
+const getGeneralEvents = (rxNostr: RxNostr, filters: Filter[]): Promise<NostrEvent[]> => {
   return new Promise((resolve) => {
     const events: NostrEvent[] = [];
     const rxReq = createRxBackwardReq();
@@ -296,9 +234,7 @@ export const getTagsAirrep = (event: NostrEvent): string[][] => {
   if (event.kind === 1) {
     return [['e', event.id, '', 'mention']];
   } else if (event.kind === 42) {
-    const tagRoot = event.tags.find(
-      (tag) => tag.length >= 3 && tag[0] === 'e' && tag[3] === 'root',
-    );
+    const tagRoot = event.tags.find((tag) => tag.length >= 3 && tag[0] === 'e' && tag[3] === 'root');
     if (tagRoot !== undefined) {
       return [tagRoot, ['e', event.id, '', 'mention']];
     } else {
@@ -310,18 +246,14 @@ export const getTagsAirrep = (event: NostrEvent): string[][] => {
 
 export const getTagsReply = (event: NostrEvent): string[][] => {
   const tagsReply: string[][] = [];
-  const tagRoot = event.tags.find(
-    (tag) => tag.length >= 4 && tag[0] === 'e' && tag[3] === 'root',
-  );
+  const tagRoot = event.tags.find((tag) => tag.length >= 4 && tag[0] === 'e' && tag[3] === 'root');
   if (tagRoot !== undefined) {
     tagsReply.push(tagRoot);
     tagsReply.push(['e', event.id, '', 'reply']);
   } else {
     tagsReply.push(['e', event.id, '', 'root']);
   }
-  for (const tag of event.tags.filter(
-    (tag) => tag.length >= 2 && tag[0] === 'p' && tag[1] !== event.pubkey,
-  )) {
+  for (const tag of event.tags.filter((tag) => tag.length >= 2 && tag[0] === 'p' && tag[1] !== event.pubkey)) {
     tagsReply.push(tag);
   }
   tagsReply.push(['p', event.pubkey, '']);
@@ -330,11 +262,7 @@ export const getTagsReply = (event: NostrEvent): string[][] => {
 
 export const getTagsFav = (event: NostrEvent): string[][] => {
   const tagsFav: string[][] = [
-    ...event.tags.filter(
-      (tag) =>
-        tag.length >= 2 &&
-        (tag[0] === 'e' || (tag[0] === 'p' && tag[1] !== event.pubkey)),
-    ),
+    ...event.tags.filter((tag) => tag.length >= 2 && (tag[0] === 'e' || (tag[0] === 'p' && tag[1] !== event.pubkey))),
     ['e', event.id, '', ''],
     ['p', event.pubkey, ''],
     ['k', String(event.kind)],
@@ -452,54 +380,14 @@ export const getScoreAddWithPao = (
     let arScoreAdd1;
     let arScoreAdd2;
     if (nFurikomiPlayer >= 0) {
-      arScoreAdd1 = getScoreAdd(
-        nAgariPlayer,
-        nFurikomiPlayer,
-        score - paoScore / 2,
-        nTsumibou,
-        nKyotaku,
-        nOyaIndex,
-        [],
-      );
-      arScoreAdd2 = getScoreAdd(
-        nAgariPlayer,
-        nPaoPlayer,
-        paoScore / 2,
-        0,
-        0,
-        nOyaIndex,
-        [],
-      );
+      arScoreAdd1 = getScoreAdd(nAgariPlayer, nFurikomiPlayer, score - paoScore / 2, nTsumibou, nKyotaku, nOyaIndex, []);
+      arScoreAdd2 = getScoreAdd(nAgariPlayer, nPaoPlayer, paoScore / 2, 0, 0, nOyaIndex, []);
     } else {
       if (countYakuman >= 2) {
-        arScoreAdd1 = getScoreAdd(
-          nAgariPlayer,
-          -1,
-          score - paoScore,
-          nTsumibou,
-          nKyotaku,
-          nOyaIndex,
-          [],
-        );
-        arScoreAdd2 = getScoreAdd(
-          nAgariPlayer,
-          nPaoPlayer,
-          paoScore,
-          0,
-          0,
-          nOyaIndex,
-          [],
-        );
+        arScoreAdd1 = getScoreAdd(nAgariPlayer, -1, score - paoScore, nTsumibou, nKyotaku, nOyaIndex, []);
+        arScoreAdd2 = getScoreAdd(nAgariPlayer, nPaoPlayer, paoScore, 0, 0, nOyaIndex, []);
       } else {
-        arScoreAdd1 = getScoreAdd(
-          nAgariPlayer,
-          nPaoPlayer,
-          score,
-          nTsumibou,
-          nKyotaku,
-          nOyaIndex,
-          [],
-        );
+        arScoreAdd1 = getScoreAdd(nAgariPlayer, nPaoPlayer, score, nTsumibou, nKyotaku, nOyaIndex, []);
         arScoreAdd2 = [0, 0, 0, 0];
       }
     }
@@ -507,15 +395,7 @@ export const getScoreAddWithPao = (
       arScoreAdd[i] = arScoreAdd1[i] + arScoreAdd2[i];
     }
   } else {
-    arScoreAdd = getScoreAdd(
-      nAgariPlayer,
-      nFurikomiPlayer,
-      score,
-      nTsumibou,
-      nKyotaku,
-      nOyaIndex,
-      arTenpaiPlayerFlag,
-    );
+    arScoreAdd = getScoreAdd(nAgariPlayer, nFurikomiPlayer, score, nTsumibou, nKyotaku, nOyaIndex, arTenpaiPlayerFlag);
   }
   return arScoreAdd;
 };

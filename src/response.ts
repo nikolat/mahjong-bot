@@ -1,10 +1,4 @@
-import {
-  getEventHash,
-  type UnsignedEvent,
-  type EventTemplate,
-  type NostrEvent,
-  type VerifiedEvent,
-} from 'nostr-tools/pure';
+import { getEventHash, type UnsignedEvent, type EventTemplate, type NostrEvent, type VerifiedEvent } from 'nostr-tools/pure';
 import * as nip19 from 'nostr-tools/nip19';
 import { Mode, Signer, getTagsAirrep, getTagsReply } from './utils.js';
 import {
@@ -22,11 +16,7 @@ import {
 } from './mj_main.js';
 import { getServerSignerMap } from './config.js';
 
-export const getResponseEvent = async (
-  requestEvent: NostrEvent,
-  signer: Signer,
-  mode: Mode,
-): Promise<VerifiedEvent[] | null> => {
+export const getResponseEvent = async (requestEvent: NostrEvent, signer: Signer, mode: Mode): Promise<VerifiedEvent[] | null> => {
   if (requestEvent.pubkey === signer.getPublicKey()) {
     //自分自身の投稿には反応しない
     return null;
@@ -50,15 +40,8 @@ const mineNonceForSort = (events: UnsignedEvent[]): UnsignedEvent[] => {
   let i = 0;
   for (let ev of [...events].reverse()) {
     let nonce_n = 0;
-    while (
-      !(
-        diff * i <= parseInt(getEventHash(ev), 16) &&
-        parseInt(getEventHash(ev), 16) < diff * (i + 1)
-      )
-    ) {
-      const nonceTag = ev.tags.find(
-        (tag) => tag.length >= 2 && tag[0] === 'nonce',
-      );
+    while (!(diff * i <= parseInt(getEventHash(ev), 16) && parseInt(getEventHash(ev), 16) < diff * (i + 1))) {
+      const nonceTag = ev.tags.find((tag) => tag.length >= 2 && tag[0] === 'nonce');
       if (nonceTag !== undefined) {
         nonceTag[1] = String(nonce_n++);
       } else {
@@ -70,11 +53,7 @@ const mineNonceForSort = (events: UnsignedEvent[]): UnsignedEvent[] => {
   return events;
 };
 
-const selectResponse = async (
-  event: NostrEvent,
-  mode: Mode,
-  signer: Signer,
-): Promise<EventTemplate[] | null> => {
+const selectResponse = async (event: NostrEvent, mode: Mode, signer: Signer): Promise<EventTemplate[] | null> => {
   const res = await mode_select(event, mode, signer);
   if (res === null) {
     return null;
@@ -90,23 +69,8 @@ const selectResponse = async (
 
 const getResmap = (
   mode: Mode,
-): [
-  RegExp,
-  (
-    event: NostrEvent,
-    mode: Mode,
-    regstr: RegExp,
-    signer: Signer,
-  ) => [string, string[][]][] | null | Promise<null>,
-][] => {
-  const resmapServer: [
-    RegExp,
-    (
-      event: NostrEvent,
-      mode: Mode,
-      regstr: RegExp,
-    ) => [string, string[][]][] | null,
-  ][] = [
+): [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp, signer: Signer) => [string, string[][]][] | null | Promise<null>][] => {
+  const resmapServer: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => [string, string[][]][] | null][] = [
     [/ping$/, res_ping],
     [/help$/, res_help],
     [/^(nostr:npub1\w{58}\s+)?gamestart/, res_s_gamestart],
@@ -115,26 +79,13 @@ const getResmap = (
     [/reset$/, res_s_reset],
     [/status$/, res_s_status],
     [/debug\s+(([1-9][mpsz])+)$/, res_s_debug],
-    [
-      /sutehai\?\s(sutehai|ankan|kakan|richi|tsumo)\s?([1-9][mpsz])?/,
-      res_s_sutehai,
-    ],
+    [/sutehai\?\s(sutehai|ankan|kakan|richi|tsumo)\s?([1-9][mpsz])?/, res_s_sutehai],
     [/^(tsumo)$/, res_s_sutehai],
     [/^(sutehai|ankan|kakan|richi)?\s?([1-9][mpsz])/, res_s_sutehai],
-    [
-      /naku\?\s(no|ron|kan|pon|chi)\s?([1-9][mpsz])?\s?([1-9][mpsz])?/,
-      res_s_naku,
-    ],
+    [/naku\?\s(no|ron|kan|pon|chi)\s?([1-9][mpsz])?\s?([1-9][mpsz])?/, res_s_naku],
     [/^(no|ron|kan|pon|chi(\s([1-9][mpsz])){2})$/, res_s_naku],
   ];
-  const resmapClient: [
-    RegExp,
-    (
-      event: NostrEvent,
-      mode: Mode,
-      regstr: RegExp,
-    ) => [string, string[][]][] | null,
-  ][] = [
+  const resmapClient: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => [string, string[][]][] | null][] = [
     [/ping$/, res_ping],
     [/join$/, res_c_join],
     [/gamestart$/, res_c_gamestart],
@@ -151,11 +102,7 @@ const getResmap = (
   }
 };
 
-const mode_select = async (
-  event: NostrEvent,
-  mode: Mode,
-  signer: Signer,
-): Promise<[string, number, string[][]][] | null> => {
+const mode_select = async (event: NostrEvent, mode: Mode, signer: Signer): Promise<[string, number, string[][]][] | null> => {
   const resmap = getResmap(mode);
   for (const [reg, func] of resmap) {
     if (reg.test(event.content)) {
@@ -201,9 +148,7 @@ const res_help = (event: NostrEvent): [string, string[][]][] => {
 
 const res_s_gamestart = (event: NostrEvent): [string, string[][]][] | null => {
   res_s_gamestart_call(event.pubkey);
-  return [
-    ['Waiting for players.\nMention "join" to me.', getTagsAirrep(event)],
-  ];
+  return [['Waiting for players.\nMention "join" to me.', getTagsAirrep(event)]];
 };
 
 const res_s_join = (event: NostrEvent): [string, string[][]][] | null => {
@@ -237,11 +182,7 @@ const res_s_status = (event: NostrEvent): [string, string[][]][] | null => {
   return res_s_status_call(event);
 };
 
-const res_s_debug = (
-  event: NostrEvent,
-  mode: Mode,
-  regstr: RegExp,
-): [string, string[][]][] | null => {
+const res_s_debug = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, string[][]][] | null => {
   const match = event.content.match(regstr);
   if (match === null) {
     throw new Error();
@@ -251,27 +192,18 @@ const res_s_debug = (
   return [['Debug mode.', getTagsAirrep(event)]];
 };
 
-const res_s_sutehai = (
-  event: NostrEvent,
-  mode: Mode,
-  regstr: RegExp,
-): [string, string[][]][] => {
+const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, string[][]][] => {
   const match = event.content.match(regstr);
   if (match === null) {
     throw new Error();
   }
   const action = match[1] ?? 'sutehai';
   const pai = match[2];
-  if (action !== 'tsumo' && !pai)
-    return [['usage: sutehai? sutehai <pi>', getTagsReply(event)]];
+  if (action !== 'tsumo' && !pai) return [['usage: sutehai? sutehai <pi>', getTagsReply(event)]];
   return res_s_sutehai_call(event, action, pai);
 };
 
-const res_s_naku = (
-  event: NostrEvent,
-  mode: Mode,
-  regstr: RegExp,
-): [string, string[][]][] | null => {
+const res_s_naku = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, string[][]][] | null => {
   const match = event.content.match(regstr);
   if (match === null) {
     throw new Error();
@@ -279,10 +211,7 @@ const res_s_naku = (
   const action = match[1];
   const pai1 = match[2];
   const pai2 = match[3];
-  if (
-    action === 'chi' &&
-    !(/[1-9][mspz]/.test(pai1) && /[1-9][mspz]/.test(pai2))
-  )
+  if (action === 'chi' && !(/[1-9][mspz]/.test(pai1) && /[1-9][mspz]/.test(pai2)))
     return [['usage: naku? chi <pi1> <pi2>', getTagsReply(event)]];
   return res_s_naku_call(event, action, pai1, pai2);
 };
@@ -290,36 +219,18 @@ const res_s_naku = (
 const serverPubkey = Array.from(getServerSignerMap().keys()).at(0)!;
 
 const res_c_join = (event: NostrEvent): [string, string[][]][] => {
-  return [
-    [
-      `nostr:${nip19.npubEncode(serverPubkey)} join`,
-      [...getTagsAirrep(event), ['p', serverPubkey, '']],
-    ],
-  ];
+  return [[`nostr:${nip19.npubEncode(serverPubkey)} join`, [...getTagsAirrep(event), ['p', serverPubkey, '']]]];
 };
 
 const res_c_gamestart = (event: NostrEvent): [string, string[][]][] => {
-  return [
-    [
-      `nostr:${nip19.npubEncode(serverPubkey)} gamestart`,
-      [...getTagsAirrep(event), ['p', serverPubkey, '']],
-    ],
-  ];
+  return [[`nostr:${nip19.npubEncode(serverPubkey)} gamestart`, [...getTagsAirrep(event), ['p', serverPubkey, '']]]];
 };
 
-const res_c_sutehai = (
-  event: NostrEvent,
-  mode: Mode,
-  regstr: RegExp,
-): [string, string[][]][] => {
+const res_c_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, string[][]][] => {
   return res_c_sutehai_call(event);
 };
 
-const res_c_naku = (
-  event: NostrEvent,
-  mode: Mode,
-  regstr: RegExp,
-): [string, string[][]][] => {
+const res_c_naku = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, string[][]][] => {
   const match = event.content.match(regstr);
   if (match === null) {
     throw new Error();

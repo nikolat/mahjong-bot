@@ -7,11 +7,9 @@ export const relayUrls: string[] = [
   //'wss://nrelay.c-stellar.net/',
 ];
 
-export const mahjongChannelId: string =
-  'c8d5c2709a5670d6f621ac8020ac3e4fc3057a4961a15319f7c0818309407723';
+export const mahjongChannelId: string = 'c8d5c2709a5670d6f621ac8020ac3e4fc3057a4961a15319f7c0818309407723';
 
-const mahjongServerNsec: string | undefined =
-  process.env.NOSTR_PRIVATE_KEY_JONGBARI;
+const mahjongServerNsec: string | undefined = process.env.NOSTR_PRIVATE_KEY_JONGBARI;
 const mahjongPlayerNsecs: (string | undefined)[] = [
   process.env.NOSTR_PRIVATE_KEY_RINRIN,
   process.env.NOSTR_PRIVATE_KEY_CHUNCHUN,
@@ -19,8 +17,7 @@ const mahjongPlayerNsecs: (string | undefined)[] = [
   process.env.NOSTR_PRIVATE_KEY_BEE,
   process.env.NOSTR_PRIVATE_KEY_UNYU,
 ];
-export const nostrWalletConnect: string | undefined =
-  process.env.NOSTR_WALLET_CONNECT;
+export const nostrWalletConnect: string | undefined = process.env.NOSTR_WALLET_CONNECT;
 
 export const pubkeysOfRelayOwnerToZap: string[] = [
   'npub1vd9ar8jusldjze24eq2tlz8xdt8pwkq99ydxh6gtzkkrkgj8m2dsndwen9',

@@ -1,30 +1,12 @@
 import type { VerifiedEvent } from 'nostr-tools/pure';
 import * as nip19 from 'nostr-tools/nip19';
 import WebSocket from 'ws';
-import {
-  createRxForwardReq,
-  createRxNostr,
-  uniq,
-  type EventPacket,
-} from 'rx-nostr';
+import { createRxForwardReq, createRxNostr, uniq, type EventPacket } from 'rx-nostr';
 import { verifier } from 'rx-nostr-crypto';
 import { Subject } from 'rxjs';
 import { setTimeout as sleep } from 'node:timers/promises';
-import {
-  getNowWithoutSecond,
-  Mode,
-  sendBootReaction,
-  sendRequestPassport,
-  Signer,
-  zapSplit,
-} from './utils.js';
-import {
-  relayUrls,
-  isDebug,
-  getServerSignerMap,
-  getPlayerSignerMap,
-  mahjongChannelId,
-} from './config.js';
+import { getNowWithoutSecond, Mode, sendBootReaction, sendRequestPassport, Signer, zapSplit } from './utils.js';
+import { relayUrls, isDebug, getServerSignerMap, getPlayerSignerMap, mahjongChannelId } from './config.js';
 import { getResponseEvent } from './response.js';
 import { page } from './page.js';
 
@@ -33,10 +15,7 @@ if (!isDebug) page();
 const main = async () => {
   const serverSignerMap = getServerSignerMap();
   const playerSignerMap = getPlayerSignerMap();
-  const signerMap = new Map<string, Signer>([
-    ...serverSignerMap,
-    ...playerSignerMap,
-  ]);
+  const signerMap = new Map<string, Signer>([...serverSignerMap, ...playerSignerMap]);
   const rxNostr = createRxNostr({
     verifier,
     websocketCtor: WebSocket,
@@ -52,11 +31,7 @@ const main = async () => {
       const mes = `[${new Date(lastKind1Time * 1000).toISOString()}]`;
       console.log(mes);
       const d = new Date();
-      if (
-        [1, 6].includes(d.getDate() % 10) &&
-        d.getHours() === 0 &&
-        d.getMinutes() === 0
-      ) {
+      if ([1, 6].includes(d.getDate() % 10) && d.getHours() === 0 && d.getMinutes() === 0) {
         for (const signer of signerMap.values()) {
           sendRequestPassport(rxNostr, signer);
           await sleep(60 * 1000);
@@ -68,20 +43,10 @@ const main = async () => {
     const ev = packet.event;
     //出力イベントを取得
     let responseEvents: VerifiedEvent[] = [];
-    const targetPubkeys = new Set(
-      ev.tags
-        .filter(
-          (tag) => tag.length >= 2 && tag[0] === 'p' && signerMap.has(tag[1]),
-        )
-        .map((tag) => tag[1]),
-    );
+    const targetPubkeys = new Set(ev.tags.filter((tag) => tag.length >= 2 && tag[0] === 'p' && signerMap.has(tag[1])).map((tag) => tag[1]));
     for (const pubkey of targetPubkeys) {
       let rs: VerifiedEvent[] | null;
-      const mode = serverSignerMap.has(pubkey)
-        ? Mode.Server
-        : playerSignerMap.has(pubkey)
-          ? Mode.Client
-          : Mode.Unknown;
+      const mode = serverSignerMap.has(pubkey) ? Mode.Server : playerSignerMap.has(pubkey) ? Mode.Client : Mode.Unknown;
       try {
         rs = await getResponseEvent(ev, signerMap.get(pubkey)!, mode);
       } catch (error) {
@@ -101,9 +66,7 @@ const main = async () => {
         await sleep(200);
       }
       rxNostr.send(responseEvent).subscribe((packet) => {
-        console.info(
-          `RES from ${nip19.npubEncode(responseEvent.pubkey)}\n${responseEvent.content}`,
-        );
+        console.info(`RES from ${nip19.npubEncode(responseEvent.pubkey)}\n${responseEvent.content}`);
         console.log(packet);
       });
       await sleep(200);
@@ -139,10 +102,7 @@ const main = async () => {
   const flushes$ = new Subject<void>();
   const now = Math.floor(Date.now() / 1000);
   const rxReqF = createRxForwardReq();
-  const subscriptionF = rxNostr
-    .use(rxReqF)
-    .pipe(uniq(flushes$))
-    .subscribe(nextF);
+  const subscriptionF = rxNostr.use(rxReqF).pipe(uniq(flushes$)).subscribe(nextF);
   rxReqF.emit([
     {
       kinds: [1],
