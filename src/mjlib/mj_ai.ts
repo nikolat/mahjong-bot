@@ -32,14 +32,16 @@ export const naniwokiru = (
   for (const p of arVisiblePai) {
     arVisibleNum[sortCode.indexOf(p)]++;
   }
+  //副露を除く
   const strTehai14 = addHai(strTehai13, strTsumo);
   const arTehai14Normal = stringToArrayWithFuro(strTehai14)[0];
-  const arKoritsuhai = removeKoritsuHai(arTehai14Normal)[1];
   const arSutehaiKouho = new Set(arTehai14Normal);
   //ドラ
   const arDorahyouji = stringToArrayWithFuro(strDorahyouji)[0];
   const arDora: string[] = arDorahyouji.map((d) => getDoraFromDorahyouji(d));
   let arDahai: string[] = [];
+  //孤立牌
+  const arKoritsuhai = removeKoritsuHai(arTehai14Normal)[1];
   let point = -1;
   for (const sutehai of arSutehaiKouho) {
     const strTehaiRemoved = removeHai(strTehai14, sutehai);
@@ -65,7 +67,11 @@ export const naniwokiru = (
           machiPoint += score * nNokori;
         }
       }
-      shantenPoint += 10000; //テンパイを崩してまでオリないこととする
+      if (machiPoint > 0) {
+        shantenPoint += 10000; //テンパイを崩してまでオリないこととする
+      } else {
+        shantenPoint -= 100000; //待ち牌が無いならむしろテンパイを崩して立て直すべき
+      }
     } else {
       const arMentsuPattern = getShanten(strTehaiRemoved)[1];
       for (const strMentsu of arMentsuPattern) {
@@ -149,10 +155,10 @@ export const naniwokiru = (
     for (let i = 0; i < aryPlayerRichi.length; i++) {
       if (aryPlayerRichi[i]) {
         if (aryPlayerGenbutsu[i].includes(sutehai)) {
-          genbutsuPoint += 2000;
+          genbutsuPoint += 4000;
           if (i === 0) {
             //親のリーチは特に避けたい
-            genbutsuPoint += 1000;
+            genbutsuPoint += 2000;
           }
         }
       }
@@ -179,11 +185,50 @@ const any = (array: string[]): string => {
   return array[Math.floor(Math.random() * array.length)];
 };
 
-export const getAnkanHaiBest = (strTsumo: string, isRichi: boolean): string => {
-  if (isRichi) {
-    return strTsumo;
+export const getAnkanHaiBest = (
+  tehai: string,
+  tsumoHai: string,
+  isRichi: boolean,
+  isRichiOther: boolean,
+  bafuHai: string,
+  jifuHai: string,
+): string => {
+  const tehaiAddTsumo = addHai(tehai, tsumoHai);
+  const arAnkanHai = getAnkanHai(tehaiAddTsumo);
+  //自身がリーチしている場合OK
+  if (isRichi && arAnkanHai.includes(tsumoHai)) {
+    return tsumoHai;
   }
-  return '';
+  const shantenBefore = getShantenYaku(tehaiAddTsumo, bafuHai, jifuHai)[0];
+  const arAnkanHaiUseful = [];
+  for (const h of arAnkanHai) {
+    const strTehai = removeHai(tehaiAddTsumo, h.repeat(4)) + `(${h.repeat(4)})`;
+    const shantenAfter = getShantenYaku(strTehai, bafuHai, jifuHai)[0];
+    if (shantenAfter <= shantenBefore) arAnkanHaiUseful.push(h);
+  }
+  //シャンテン数が増えてしまうならNG
+  if (arAnkanHaiUseful.length == 0) {
+    return '';
+  }
+  //三槓子・四槓子狙いはOK
+  if (countKantsu(tehai) >= 2) {
+    return any(arAnkanHaiUseful);
+  }
+  //他家がリーチしている場合NG
+  if (isRichiOther) {
+    return '';
+  }
+  //基本OK
+  return any(arAnkanHaiUseful);
+};
+
+export const getAnkanHai = (hai: string): string[] => {
+  const arHai: string[] = stringToArrayWithFuro(hai)[0];
+  const arRet: string[] = [];
+  for (const h of new Set<string>(arHai)) {
+    if (arHai.filter((e) => e === h).length >= 4) arRet.push(h);
+  }
+  return arRet;
 };
 
 export const getKakanHaiBest = (
@@ -191,15 +236,11 @@ export const getKakanHaiBest = (
   tsumoHai: string,
   bafuHai: string,
   jifuHai: string,
-  aryPlayerRichi: number[],
+  isRichiOther: boolean,
 ): string => {
-  //誰かがリーチしていたらカンしない
-  for (const p of aryPlayerRichi) {
-    if (p >= 0) return '';
-  }
   const tehaiAddTsumo = addHai(tehai, tsumoHai);
   const arKakanHai: string[] = getKakanHai(tehaiAddTsumo);
-  const shantenBefore = getShantenYaku(tehai, bafuHai, jifuHai)[0];
+  const shantenBefore = getShantenYaku(tehaiAddTsumo, bafuHai, jifuHai)[0];
   const arKakanHaiUseful: string[] = [];
   for (const h of arKakanHai) {
     let strTehai = tehaiAddTsumo.replace(
@@ -210,8 +251,20 @@ export const getKakanHaiBest = (
     const shantenAfter = getShantenYaku(strTehai, bafuHai, jifuHai)[0];
     if (shantenAfter <= shantenBefore) arKakanHaiUseful.push(h);
   }
-  if (arKakanHaiUseful.length > 0) return any(arKakanHaiUseful);
-  return '';
+  //シャンテン数が増えてしまうならNG
+  if (arKakanHaiUseful.length === 0) {
+    return '';
+  }
+  //三槓子・四槓子狙いはOK
+  if (countKantsu(tehai) >= 2) {
+    return any(arKakanHaiUseful);
+  }
+  //他家がリーチしている場合NG
+  if (isRichiOther) {
+    return '';
+  }
+  //基本OK
+  return any(arKakanHaiUseful);
 };
 
 export const getKakanHai = (tehai: string): string[] => {
@@ -226,57 +279,33 @@ export const getKakanHai = (tehai: string): string[] => {
 };
 
 export const shouldRichi = (
-  strTehai13: string,
-  strTsumo: string,
+  tehai: string,
+  tsumoHai: string,
   isRichi: boolean,
   nokori: number,
   dahai: string,
-  strBafuhai: string,
-  strJifuhai: string,
-  strDorahyouji: string,
+  bafuHai: string,
+  jifuHai: string,
 ): boolean => {
-  if (!canRichi(strTehai13, strTsumo, isRichi, nokori)) {
+  if (!canRichi(tehai, tsumoHai, isRichi, nokori, dahai)) {
     return false;
   }
-  //親ならリーチする
-  if (strJifuhai === '1z') {
-    return true;
-  }
-  //待ちが悪い場合は様子を見る
-  const tehaiNew = removeHai(addHai(strTehai13, strTsumo), dahai);
-  const arMachi = stringToArrayWithFuro(getMachi(tehaiNew))[0];
-  if (arMachi.length < 2) {
+  //別の役について一向聴である場合はリーチしない
+  const yaku = getShantenYaku(addHai(tehai, tsumoHai), bafuHai, jifuHai)[1];
+  if (Array.from(yaku.values()).includes(1)) {
     return false;
-  }
-  //役があるならヤミテンでもいいのでは
-  const arDorahyouji = stringToArrayWithFuro(strDorahyouji)[0];
-  const arDora: string[] = arDorahyouji.map((d) => getDoraFromDorahyouji(d));
-  const strDora = arDora.join('');
-  const isTsumo = true;
-  for (const machi of arMachi) {
-    const score = getScore(
-      tehaiNew,
-      machi,
-      strBafuhai,
-      strJifuhai,
-      strDora,
-      isTsumo,
-    )[0];
-    if (score > 0) {
-      return false;
-    }
   }
   return true;
 };
 
 export const canRichi = (
   tehai: string,
-  strTsumo: string,
+  tsumoHai: string,
   isRichi: boolean,
   nokori: number,
   sutehai?: string,
 ): boolean => {
-  let tehai2 = addHai(tehai, strTsumo);
+  let tehai2 = addHai(tehai, tsumoHai);
   if (sutehai !== undefined) {
     tehai2 = removeHai(tehai2, sutehai);
   }
@@ -301,16 +330,22 @@ export const shouldPon = (
   sutehai: string,
   bafuHai: string,
   jifuHai: string,
-  arRichiJunme: number[],
+  isRichiOther: boolean,
 ): boolean => {
-  //誰かがリーチしていたら鳴かない
-  if (arRichiJunme.some((e) => e >= 0)) return false;
   const h = sutehai;
   const tehaiNew = removeHai(tehai, h.repeat(2)) + `<${h.repeat(3)}>`;
   const shantenBefore = getShantenYaku(tehai, bafuHai, jifuHai)[0];
   const shantenAfter = getShantenYaku(tehaiNew, bafuHai, jifuHai)[0];
+  //それでテンパイするなら鳴く
   if (shantenAfter < shantenBefore && shantenAfter === 0) {
-    //それでテンパイするなら鳴く
+    return true;
+  }
+  //誰かがリーチしていたら鳴かない
+  if (isRichiOther) {
+    return false;
+  }
+  //鳴いてもよしとする
+  if (shantenAfter < shantenBefore) {
     return true;
   }
   return false;
@@ -321,24 +356,34 @@ export const getChiMaterialBest = (
   sutehai: string,
   bafuHai: string,
   jifuHai: string,
-  arRichiJunme: number[],
+  isRichiOther: boolean,
 ): string => {
-  //誰かがリーチしていたら鳴かない
-  if (arRichiJunme.some((e) => e >= 0)) return '';
   const arChi: string[] = getChiMaterial(tehai, sutehai);
   const shantenBefore = getShantenYaku(tehai, bafuHai, jifuHai)[0];
   const r: string[] = [];
+  const rTenpai: string[] = [];
   for (const c of arChi) {
     const furoArray = [sutehai, c.slice(0, 2), c.slice(2, 4)];
     furoArray.sort(compareFn);
     const tehaiNew = removeHai(tehai, c) + `<${furoArray.join('')}>`;
     const shantenAfter = getShantenYaku(tehaiNew, bafuHai, jifuHai)[0];
     if (shantenAfter < shantenBefore && shantenAfter === 0) {
-      //それでテンパイするなら鳴く
       r.push(c);
+      if (shantenAfter === 0) {
+        rTenpai.push(c);
+      }
     }
   }
   if (r.length === 0) return '';
+  //それでテンパイするなら鳴く
+  if (rTenpai.length > 0) {
+    return any(rTenpai);
+  }
+  //誰かがリーチしていたら鳴かない
+  if (isRichiOther) {
+    return '';
+  }
+  //鳴いてもよしとする
   return any(r);
 };
 

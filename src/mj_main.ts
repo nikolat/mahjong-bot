@@ -4,6 +4,7 @@ import { getShanten } from './mjlib/mj_shanten.js';
 import {
   canRichi,
   countKantsu,
+  getAnkanHai,
   getAnkanHaiBest,
   getChiMaterial,
   getChiMaterialBest,
@@ -1443,15 +1444,6 @@ const canAnkan = (
   }
 };
 
-const getAnkanHai = (hai: string): string[] => {
-  const arHai: string[] = stringToArrayWithFuro(hai)[0];
-  const arRet: string[] = [];
-  for (const h of new Set<string>(arHai)) {
-    if (arHai.filter((e) => e === h).length >= 4) arRet.push(h);
-  }
-  return arRet;
-};
-
 const canKakan = (
   nPlayer: number,
   tsumoHai: string,
@@ -1481,6 +1473,9 @@ export const res_c_sutehai_call = (
   );
   const shanten = getShanten(addHai(arTehai[i], tsumo))[0];
   const isRichi = arRichiJunme[i] >= 0;
+  const isRichiOther = arRichiJunme
+    .filter((v, idx) => idx !== i)
+    .some((n) => n >= 0);
   let action: string;
   let select: string;
   let dahai = '';
@@ -1508,10 +1503,18 @@ export const res_c_sutehai_call = (
           tsumo,
           ['1z', '2z'][bafu],
           getJifuHai(i),
-          arRichiJunme,
+          isRichiOther,
         );
     }
-    if (canAnkan(i, tsumo)) ankanHai = getAnkanHaiBest(tsumo, isRichi);
+    if (canAnkan(i, tsumo))
+      ankanHai = getAnkanHaiBest(
+        arTehai[i],
+        tsumo,
+        isRichi,
+        isRichiOther,
+        ['1z', '2z'][bafu],
+        getJifuHai(i),
+      );
   }
   if (shanten === -1) {
     const content = `nostr:${nip19.npubEncode(event.pubkey)} sutehai? tsumo\n:${convertEmoji(tsumo)}:`;
@@ -1526,7 +1529,6 @@ export const res_c_sutehai_call = (
       dahai,
       ['1z', '2z'][bafu],
       getJifuHai(i),
-      dorahyouji,
     )
   ) {
     action = 'richi';
@@ -1580,6 +1582,9 @@ export const res_c_naku_call = (
       .filter((tag) => tag.length >= 2 && tag[0] === 'p')
       .map((tag) => tag[1])[0],
   );
+  const isRichiOther = arRichiJunme
+    .filter((v, idx) => idx !== i)
+    .some((n) => n >= 0);
   let res = 'no';
   if (action.includes('ron')) {
     res = 'ron';
@@ -1594,7 +1599,7 @@ export const res_c_naku_call = (
         savedSutehai,
         ['1z', '2z'][bafu],
         getJifuHai(i),
-        arRichiJunme,
+        isRichiOther,
       )
     ) {
       res = 'pon';
@@ -1605,7 +1610,7 @@ export const res_c_naku_call = (
       savedSutehai,
       ['1z', '2z'][bafu],
       getJifuHai(i),
-      arRichiJunme,
+      isRichiOther,
     );
     if (s !== '') {
       res = ['chi', s.slice(0, 2), s.slice(2, 4)].join(' ');
