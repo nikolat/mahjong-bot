@@ -30,23 +30,39 @@ import { convertEmoji, getEmojiTag, getScoreAdd, getScoreAddWithPao, getTagsAirr
 
 const status_kind = 30315;
 
-export const res_s_gamestart_call = (pubkey: string): string => {
+export const res_s_gamestart_call = (event: NostrEvent): [string, number, string[][]][] => {
+  if (status) {
+    return [['Playing now. Please reset first.', event.kind, getTagsReply(event)]];
+  }
   reset_game();
-  players.push(pubkey);
+  players.push(event.pubkey);
   status = '募集中 1/4';
-  return status;
+  return [
+    [status, status_kind, [['d', 'general']]],
+    ['Waiting for players.\nMention "join" to me.', event.kind, getTagsAirrep(event)],
+  ];
 };
 
-export const res_s_join_call = (pubkey: string): [number, string] => {
-  if (players.includes(pubkey)) {
-    throw Error('You have already joined.');
+export const res_s_join_call = (event: NostrEvent): [string, number, string[][]][] => {
+  if (!status.startsWith('募集中')) {
+    return [['Not looking for players.', event.kind, getTagsReply(event)]];
+  }
+  if (players.includes(event.pubkey)) {
+    return [['You have already joined.', event.kind, getTagsReply(event)]];
   }
   if (players.length === 4) {
-    throw Error('Sorry, we are full.');
+    return [['Sorry, we are full.', event.kind, getTagsReply(event)]];
   }
-  players.push(pubkey);
-  status = `募集中 ${players.length}/4`;
-  return [players.length, status];
+  players.push(event.pubkey);
+  if (players.length === 4) {
+    return mahjongGameStart(event);
+  } else {
+    status = `募集中 ${players.length}/4`;
+    return [
+      [status, status_kind, [['d', 'general']]],
+      [`${players.length}/4 joined.`, event.kind, getTagsAirrep(event)],
+    ];
+  }
 };
 
 export const res_s_reset_call = (): void => {
@@ -57,7 +73,7 @@ export const res_s_debug_call = (yama: string): void => {
   debugYama = stringToArrayWithFuro(yama)[0];
 };
 
-export const res_s_status_call = (event: NostrEvent): [string, string[][]][] => {
+export const res_s_status_call = (event: NostrEvent): [string, number, string[][]][] => {
   const a: string[] = [
     `${arBafu[bafu]}${kyoku}局 :${convertEmoji('stick100')}:x${tsumibou} :${convertEmoji('stick1000')}:x${kyotaku}`,
     `${tehaiToEmoji(dorahyouji)}${`:${convertEmoji('back')}:`.repeat((10 - dorahyouji.length) / 2)}`,
@@ -79,7 +95,7 @@ export const res_s_status_call = (event: NostrEvent): [string, string[][]][] => 
     getEmojiTag('back'),
     ...getTagsEmoji(emojiHai.join('')),
   ];
-  return [[content, tags]];
+  return [[content, event.kind, tags]];
 };
 
 let debugYama: string[] = [];
@@ -150,7 +166,14 @@ let reservedNaku = new Map<string, string[]>();
 let dResponseNeed: Map<string, string>;
 const arBafu = ['東', '南'];
 
-export const startKyoku = (event: NostrEvent): [string, number, string[][]][] => {
+export const res_s_next_call = (event: NostrEvent): [string, number, string[][]][] => {
+  if (status !== 'next待ち') {
+    return [['We cannot go to the next stage yet.', event.kind, getTagsReply(event)]];
+  }
+  return startKyoku(event);
+};
+
+const startKyoku = (event: NostrEvent): [string, number, string[][]][] => {
   const res: [string, string[][]][] = [];
   if (bafu >= 2) {
     //東場、南場
@@ -1103,7 +1126,7 @@ const canKakan = (nPlayer: number, tsumoHai: string, kakanHaiSelected?: string):
   return false;
 };
 
-export const res_c_sutehai_call = (event: NostrEvent): [string, string[][]][] => {
+export const res_c_sutehai_call = (event: NostrEvent): [string, number, string[][]][] => {
   const tsumo = savedTsumo;
   if (!tsumo) {
     return res_c_sutehai_after_furo_call(event);
@@ -1140,7 +1163,7 @@ export const res_c_sutehai_call = (event: NostrEvent): [string, string[][]][] =>
   if (shanten === -1) {
     const content = `nostr:${nip19.npubEncode(event.pubkey)} sutehai? tsumo\n:${convertEmoji(tsumo)}:`;
     const tags = [...getTagsReply(event), ...getTagsEmoji(tsumo)];
-    return [[content, tags]];
+    return [[content, event.kind, tags]];
   } else if (shouldRichi(arTehai[i], tsumo, isRichi, arYama.length - nYamaIndex, dahai, ['1z', '2z'][bafu], getJifuHai(i))) {
     action = 'richi';
     select = dahai;
@@ -1156,10 +1179,10 @@ export const res_c_sutehai_call = (event: NostrEvent): [string, string[][]][] =>
   }
   const content = `nostr:${nip19.npubEncode(event.pubkey)} sutehai? ${action} ${select}\n:${convertEmoji(dahai)}:`;
   const tags = [...getTagsReply(event), ...getTagsEmoji(dahai)];
-  return [[content, tags]];
+  return [[content, event.kind, tags]];
 };
 
-export const res_c_sutehai_after_furo_call = (event: NostrEvent): [string, string[][]][] => {
+const res_c_sutehai_after_furo_call = (event: NostrEvent): [string, number, string[][]][] => {
   const i = players.indexOf(event.tags.filter((tag) => tag.length >= 2 && tag[0] === 'p').map((tag) => tag[1])[0]);
   const action = 'sutehai';
   const select = naniwokiru(
@@ -1175,10 +1198,10 @@ export const res_c_sutehai_after_furo_call = (event: NostrEvent): [string, strin
   );
   const content = `nostr:${nip19.npubEncode(event.pubkey)} sutehai? ${action} ${select}\n:${convertEmoji(select)}:`;
   const tags = [...getTagsReply(event), ...getTagsEmoji(select)];
-  return [[content, tags]];
+  return [[content, event.kind, tags]];
 };
 
-export const res_c_naku_call = (event: NostrEvent, action: string[]): [string, string[][]][] => {
+export const res_c_naku_call = (event: NostrEvent, action: string[]): [string, number, string[][]][] => {
   const i = players.indexOf(event.tags.filter((tag) => tag.length >= 2 && tag[0] === 'p').map((tag) => tag[1])[0]);
   const isRichiOther = arRichiJunme.filter((v, idx) => idx !== i).some((n) => n >= 0);
   let res = 'no';
@@ -1200,7 +1223,7 @@ export const res_c_naku_call = (event: NostrEvent, action: string[]): [string, s
   }
   const content = `nostr:${nip19.npubEncode(event.pubkey)} naku? ${res}`;
   const tags = getTagsReply(event);
-  return [[content, tags]];
+  return [[content, event.kind, tags]];
 };
 
 const reset_game = () => {
