@@ -16,6 +16,8 @@ import {
 } from './mj_main.js';
 import { getServerSignerMap } from './config.js';
 
+const status_kind = 30315;
+
 export const getResponseEvent = async (requestEvent: NostrEvent, signer: Signer, mode: Mode): Promise<VerifiedEvent[] | null> => {
   if (requestEvent.pubkey === signer.getPublicKey()) {
     //自分自身の投稿には反応しない
@@ -69,8 +71,8 @@ const selectResponse = async (event: NostrEvent, mode: Mode, signer: Signer): Pr
 
 const getResmap = (
   mode: Mode,
-): [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp, signer: Signer) => [string, string[][]][] | null | Promise<null>][] => {
-  const resmapServer: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => [string, string[][]][] | null][] = [
+): [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp, signer: Signer) => [string, number, string[][]][] | null | Promise<null>][] => {
+  const resmapServer: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => [string, number, string[][]][] | null][] = [
     [/ping$/, res_ping],
     [/help$/, res_help],
     [/^(nostr:npub1\w{58}\s+)?gamestart/, res_s_gamestart],
@@ -85,7 +87,7 @@ const getResmap = (
     [/naku\?\s(no|ron|kan|pon|chi)\s?([1-9][mpsz])?\s?([1-9][mpsz])?/, res_s_naku],
     [/^(no|ron|kan|pon|chi(\s([1-9][mpsz])){2})$/, res_s_naku],
   ];
-  const resmapClient: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => [string, string[][]][] | null][] = [
+  const resmapClient: [RegExp, (event: NostrEvent, mode: Mode, regstr: RegExp) => [string, number, string[][]][] | null][] = [
     [/ping$/, res_ping],
     [/join$/, res_c_join],
     [/gamestart$/, res_c_gamestart],
@@ -106,21 +108,17 @@ const mode_select = async (event: NostrEvent, mode: Mode, signer: Signer): Promi
   const resmap = getResmap(mode);
   for (const [reg, func] of resmap) {
     if (reg.test(event.content)) {
-      const res = await func(event, mode, reg, signer);
-      if (res === null) {
-        return null;
-      }
-      return res.map((r) => [r[0], event.kind, r[1]]);
+      return await func(event, mode, reg, signer);
     }
   }
   return null;
 };
 
-const res_ping = (event: NostrEvent): [string, string[][]][] => {
-  return [['pong', getTagsReply(event)]];
+const res_ping = (event: NostrEvent): [string, number, string[][]][] => {
+  return [['pong', event.kind, getTagsReply(event)]];
 };
 
-const res_help = (event: NostrEvent): [string, string[][]][] => {
+const res_help = (event: NostrEvent): [string, number, string[][]][] => {
   const content = [
     '【麻雀サーバーbot(私)の使い方】',
     'ping: pongと返します',
@@ -143,67 +141,78 @@ const res_help = (event: NostrEvent): [string, string[][]][] => {
     'nostr:npub1whanysx54uf9tgjfeueljg3498kyru3rhwxajwuzh0nw0x0eujss9tlcjh',
     'nostr:npub18ee7ggjpp4uf77aurecqhtfpz5y0j95pd9hadrdsxt5we3pysnnqe8k224',
   ];
-  return [[content.join('\n'), getTagsReply(event)]];
+  return [[content.join('\n'), event.kind, getTagsReply(event)]];
 };
 
-const res_s_gamestart = (event: NostrEvent): [string, string[][]][] | null => {
-  res_s_gamestart_call(event.pubkey);
-  return [['Waiting for players.\nMention "join" to me.', getTagsAirrep(event)]];
+const res_s_gamestart = (event: NostrEvent): [string, number, string[][]][] | null => {
+  const status = res_s_gamestart_call(event.pubkey);
+  return [
+    ['Waiting for players.\nMention "join" to me.', event.kind, getTagsAirrep(event)],
+    [status, status_kind, [['d', 'general']]],
+  ];
 };
 
-const res_s_join = (event: NostrEvent): [string, string[][]][] | null => {
-  let count: number;
+const res_s_join = (event: NostrEvent): [string, number, string[][]][] | null => {
+  let res_join: [number, string];
   try {
-    count = res_s_join_call(event.pubkey);
+    res_join = res_s_join_call(event.pubkey);
   } catch (error) {
     let mes = 'unknown error';
     if (error instanceof Error) {
       mes = error.message;
     }
-    return [[mes, getTagsReply(event)]];
+    return [[mes, event.kind, getTagsReply(event)]];
   }
+  const [count, status] = res_join;
   if (count === 4) {
     return mahjongGameStart(event);
   } else {
-    return [[`${count}/4 joined.`, getTagsAirrep(event)]];
+    return [
+      [`${count}/4 joined.`, event.kind, getTagsAirrep(event)],
+      [status, status_kind, [['d', 'general']]],
+    ];
   }
 };
 
-const res_s_next = (event: NostrEvent): [string, string[][]][] | null => {
+const res_s_next = (event: NostrEvent): [string, number, string[][]][] | null => {
   return startKyoku(event);
 };
 
-const res_s_reset = (event: NostrEvent): [string, string[][]][] | null => {
+const res_s_reset = (event: NostrEvent): [string, number, string[][]][] | null => {
   res_s_reset_call();
-  return [['Data cleared.', getTagsAirrep(event)]];
+  return [
+    ['Data cleared.', event.kind, getTagsAirrep(event)],
+    ['', status_kind, [['d', 'general']]],
+  ];
 };
 
-const res_s_status = (event: NostrEvent): [string, string[][]][] | null => {
-  return res_s_status_call(event);
+const res_s_status = (event: NostrEvent): [string, number, string[][]][] | null => {
+  const res = res_s_status_call(event);
+  return res.map((r) => [r[0], event.kind, r[1]]);
 };
 
-const res_s_debug = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, string[][]][] | null => {
+const res_s_debug = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, number, string[][]][] | null => {
   const match = event.content.match(regstr);
   if (match === null) {
     throw new Error();
   }
   const yama: string = match[1];
   res_s_debug_call(yama);
-  return [['Debug mode.', getTagsAirrep(event)]];
+  return [['Debug mode.', event.kind, getTagsAirrep(event)]];
 };
 
-const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, string[][]][] => {
+const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, number, string[][]][] => {
   const match = event.content.match(regstr);
   if (match === null) {
     throw new Error();
   }
   const action = match[1] ?? 'sutehai';
   const pai = match[2];
-  if (action !== 'tsumo' && !pai) return [['usage: sutehai? sutehai <pi>', getTagsReply(event)]];
+  if (action !== 'tsumo' && !pai) return [['usage: sutehai? sutehai <pi>', event.kind, getTagsReply(event)]];
   return res_s_sutehai_call(event, action, pai);
 };
 
-const res_s_naku = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, string[][]][] | null => {
+const res_s_naku = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, number, string[][]][] | null => {
   const match = event.content.match(regstr);
   if (match === null) {
     throw new Error();
@@ -212,29 +221,31 @@ const res_s_naku = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, str
   const pai1 = match[2];
   const pai2 = match[3];
   if (action === 'chi' && !(/[1-9][mspz]/.test(pai1) && /[1-9][mspz]/.test(pai2)))
-    return [['usage: naku? chi <pi1> <pi2>', getTagsReply(event)]];
+    return [['usage: naku? chi <pi1> <pi2>', event.kind, getTagsReply(event)]];
   return res_s_naku_call(event, action, pai1, pai2);
 };
 
 const serverPubkey = Array.from(getServerSignerMap().keys()).at(0)!;
 
-const res_c_join = (event: NostrEvent): [string, string[][]][] => {
-  return [[`nostr:${nip19.npubEncode(serverPubkey)} join`, [...getTagsAirrep(event), ['p', serverPubkey, '']]]];
+const res_c_join = (event: NostrEvent): [string, number, string[][]][] => {
+  return [[`nostr:${nip19.npubEncode(serverPubkey)} join`, event.kind, [...getTagsAirrep(event), ['p', serverPubkey, '']]]];
 };
 
-const res_c_gamestart = (event: NostrEvent): [string, string[][]][] => {
-  return [[`nostr:${nip19.npubEncode(serverPubkey)} gamestart`, [...getTagsAirrep(event), ['p', serverPubkey, '']]]];
+const res_c_gamestart = (event: NostrEvent): [string, number, string[][]][] => {
+  return [[`nostr:${nip19.npubEncode(serverPubkey)} gamestart`, event.kind, [...getTagsAirrep(event), ['p', serverPubkey, '']]]];
 };
 
-const res_c_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, string[][]][] => {
-  return res_c_sutehai_call(event);
+const res_c_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, number, string[][]][] => {
+  const res = res_c_sutehai_call(event);
+  return res.map((r) => [r[0], event.kind, r[1]]);
 };
 
-const res_c_naku = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, string[][]][] => {
+const res_c_naku = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, number, string[][]][] => {
   const match = event.content.match(regstr);
   if (match === null) {
     throw new Error();
   }
   const command = match[1].split(/\s/);
-  return res_c_naku_call(event, command);
+  const res = res_c_naku_call(event, command);
+  return res.map((r) => [r[0], event.kind, r[1]]);
 };

@@ -28,12 +28,16 @@ import {
 import { getMachi } from './mjlib/mj_machi.js';
 import { convertEmoji, getEmojiTag, getScoreAdd, getScoreAddWithPao, getTagsAirrep, getTagsEmoji, getTagsReply } from './utils.js';
 
-export const res_s_gamestart_call = (pubkey: string): void => {
+const status_kind = 30315;
+
+export const res_s_gamestart_call = (pubkey: string): string => {
   reset_game();
   players.push(pubkey);
+  status = '募集中 1/4';
+  return status;
 };
 
-export const res_s_join_call = (pubkey: string): number => {
+export const res_s_join_call = (pubkey: string): [number, string] => {
   if (players.includes(pubkey)) {
     throw Error('You have already joined.');
   }
@@ -41,7 +45,8 @@ export const res_s_join_call = (pubkey: string): number => {
     throw Error('Sorry, we are full.');
   }
   players.push(pubkey);
-  return players.length;
+  status = `募集中 ${players.length}/4`;
+  return [players.length, status];
 };
 
 export const res_s_reset_call = (): void => {
@@ -79,6 +84,7 @@ export const res_s_status_call = (event: NostrEvent): [string, string[][]][] => 
 
 let debugYama: string[] = [];
 
+let status: string;
 const players: string[] = [];
 let arScore: number[];
 let tsumibou: number;
@@ -86,7 +92,7 @@ let kyotaku: number;
 let bafu: number;
 let kyoku: number;
 let oyaIndex: number;
-export const mahjongGameStart = (event: NostrEvent): [string, string[][]][] => {
+export const mahjongGameStart = (event: NostrEvent): [string, number, string[][]][] => {
   const res: [string, string[][]][] = [];
   arScore = [25000, 25000, 25000, 25000];
   tsumibou = 0;
@@ -101,7 +107,8 @@ export const mahjongGameStart = (event: NostrEvent): [string, string[][]][] => {
     const tags = [...getTagsAirrep(event), ['p', players[i], ''], ['t', 'gamestart']];
     res.push([content, tags]);
   }
-  return [...res, ...startKyoku(event)];
+  const res2: [string, number, string[][]][] = res.map((r) => [r[0], event.kind, r[1]]);
+  return [...res2, ...startKyoku(event)];
 };
 
 const getSeki = (oya: number): Map<string, string> => {
@@ -143,7 +150,7 @@ let reservedNaku = new Map<string, string[]>();
 let dResponseNeed: Map<string, string>;
 const arBafu = ['東', '南'];
 
-export const startKyoku = (event: NostrEvent): [string, string[][]][] => {
+export const startKyoku = (event: NostrEvent): [string, number, string[][]][] => {
   const res: [string, string[][]][] = [];
   if (bafu >= 2) {
     //東場、南場
@@ -156,8 +163,10 @@ export const startKyoku = (event: NostrEvent): [string, string[][]][] => {
     const tags_result = [...getTagsAirrep(event), ...players.map((pubkey) => ['p', pubkey, ''])];
     res.push([content_result, tags_result]);
     reset_game();
-    return res;
+    const res2: [string, number, string[][]][] = res.map((r) => [r[0], event.kind, r[1]]);
+    return [['', status_kind, [['d', 'general']]], ...res2];
   }
+  status = '対局中';
   if (debugYama.length > 0) {
     arYama = debugYama;
     debugYama = [];
@@ -220,7 +229,8 @@ export const startKyoku = (event: NostrEvent): [string, string[][]][] => {
   const content_sutehai = `${tehaiToEmoji(arTehai[oyaIndex])} ${tehaiToEmoji(savedTsumo)}\nnostr:${nip19.npubEncode(players[oyaIndex])} GET sutehai?`;
   const tags_sutehai = [...getTagsAirrep(event), ['p', players[oyaIndex], ''], ...getTagsEmoji(addHai(arTehai[oyaIndex], savedTsumo))];
   res.push([content_sutehai, tags_sutehai]);
-  return res;
+  const res2: [string, number, string[][]][] = res.map((r) => [r[0], event.kind, r[1]]);
+  return [[status, status_kind, [['d', 'general']]], ...res2];
 };
 
 const tehaiToEmoji = (tehai: string): string => {
@@ -259,7 +269,7 @@ const getScoreView = (
   nFurikomiPlayer: number,
   atarihai: string,
   isTsumo: boolean,
-): [string, string[][]][] => {
+): [string, number, string[][]][] => {
   const richi: number = arRichiJunme[nAgariPlayer] === 0 ? 2 : arRichiJunme[nAgariPlayer] > 0 ? 1 : 0;
   const arUradorahyouji: string[] = [];
   for (let i = 0; i < stringToArrayWithFuro(dorahyouji)[0].length; i++) {
@@ -311,7 +321,10 @@ const getScoreView = (
   }
   const content_view = content + '\n' + `${tehaiToEmoji(arTehai[nAgariPlayer])} :${convertEmoji(atarihai)}:`;
   const tags_view = [...getTagsAirrep(event), ...getTagsEmoji(addHai(arTehai[nAgariPlayer], atarihai))];
-  return [...goNextKyoku(event, nAgariPlayer, r[1], r[3], arUradorahyouji, point, [0, 0, 0, 0], true), [content_view, tags_view]];
+  return [
+    ...goNextKyoku(event, nAgariPlayer, r[1], r[3], arUradorahyouji, point, [0, 0, 0, 0], true),
+    [content_view, event.kind, tags_view],
+  ];
 };
 
 const goNextKyoku = (
@@ -323,7 +336,7 @@ const goNextKyoku = (
   arScoreAdd: number[],
   arTenpaiPlayerFlag: number[],
   needNotify: boolean,
-): [string, string[][]][] => {
+): [string, number, string[][]][] => {
   const res: [string, string[][]][] = [];
   //通知
   if (needNotify) {
@@ -371,6 +384,7 @@ const goNextKyoku = (
   const content_kyokuend = `${players.map((pubkey) => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY kyokuend`;
   const tags_kyokuend = [...getTagsAirrep(event), ...players.map((pubkey) => ['p', pubkey, ''])];
   res.push([content_kyokuend, tags_kyokuend]);
+  status = 'next待ち';
   //連荘判定
   if (nAgariPlayer >= 0) {
     kyotaku = 0;
@@ -389,7 +403,8 @@ const goNextKyoku = (
       oyaIndex = (oyaIndex + 1) % 4;
     }
   }
-  return res;
+  const res2: [string, number, string[][]][] = res.map((r) => [r[0], event.kind, r[1]]);
+  return [[status, status_kind, [['d', 'general']]], ...res2];
 };
 
 const getJifuHai = (nPlayer: number): string => {
@@ -405,13 +420,13 @@ const getJifuHai = (nPlayer: number): string => {
   return dSeki.get(players[nPlayer]) ?? '';
 };
 
-export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: string): [string, string[][]][] => {
+export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: string): [string, number, string[][]][] => {
   const command = 'sutehai?';
   const res: [string, string[][]][] = [];
   if (dResponseNeed.get(event.pubkey) !== command) {
     const content = `You are not required to send "${command}"`;
     const tags = getTagsReply(event);
-    return [[content, tags]];
+    return [[content, event.kind, tags]];
   }
   if (savedDoratsuchi !== undefined) {
     res.push(savedDoratsuchi);
@@ -427,12 +442,13 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
         const content_say = `${players.map((pubkey) => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY say nostr:${nip19.npubEncode(players[i])} tsumo`;
         const tags_say = [...getTagsAirrep(event), ...players.map((pubkey) => ['p', pubkey, ''])];
         res.push([content_say, tags_say]);
-        return [...res, ...getScoreView(event, i, -1, savedTsumo, true)];
+        const res2: [string, number, string[][]][] = res.map((r) => [r[0], event.kind, r[1]]);
+        return [...res2, ...getScoreView(event, i, -1, savedTsumo, true)];
       } else {
         const content = 'You cannot tsumo.';
         const tags = getTagsReply(event);
         dResponseNeed.set(event.pubkey, command);
-        return [[content, tags]];
+        return [[content, event.kind, tags]];
       }
       break;
     case 'richi':
@@ -446,7 +462,7 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
         const content = `You cannot richi ${pai}.`;
         const tags = getTagsReply(event);
         dResponseNeed.set(event.pubkey, command);
-        return [[content, tags]];
+        return [[content, event.kind, tags]];
       }
       break;
     case 'sutehai':
@@ -457,7 +473,7 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
         const content = `You cannot sutehai ${pai} .`;
         const tags = getTagsReply(event);
         dResponseNeed.set(event.pubkey, command);
-        return [[content, tags]];
+        return [[content, event.kind, tags]];
       }
       break;
     case 'ankan':
@@ -491,12 +507,12 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
         const content_sutehai = `${tehaiToEmoji(arTehai[i])} ${tehaiToEmoji(savedTsumo)}\nnostr:${nip19.npubEncode(players[i])} GET sutehai?`;
         const tags_sutehai = [...getTagsAirrep(event), ['p', players[i], ''], ...getTagsEmoji(addHai(arTehai[i], savedTsumo))];
         res.push([content_sutehai, tags_sutehai]);
-        return res;
+        return res.map((r) => [r[0], event.kind, r[1]]);
       } else {
         const content = `You cannot ankan ${pai} .`;
         const tags = getTagsReply(event);
         dResponseNeed.set(event.pubkey, command);
-        return [[content, tags]];
+        return [[content, event.kind, tags]];
       }
     case 'kakan':
       if (canKakan(i, savedTsumo, pai)) {
@@ -544,18 +560,18 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
         //槍槓が可能であれば処理を分ける
         if (naku.length > 0) {
           savedSutehai = pai;
-          return [...res, ...naku];
+          return [...res, ...naku].map((r) => [r[0], event.kind, r[1]]);
         } else {
           dResponseNeed.set(players[i], 'sutehai?');
           const resFinal = [...res, ...savedKakan];
           savedKakan = undefined;
-          return resFinal;
+          return resFinal.map((r) => [r[0], event.kind, r[1]]);
         }
       } else {
         const content = `You cannot kakan ${pai} .`;
         const tags = getTagsReply(event);
         dResponseNeed.set(event.pubkey, command);
-        return [[content, tags]];
+        return [[content, event.kind, tags]];
       }
       break;
     default:
@@ -583,9 +599,10 @@ export const res_s_sutehai_call = (event: NostrEvent, action: string, pai: strin
     }
   }
   if (naku.length > 0) {
-    return [...res, ...naku];
+    return [...res, ...naku].map((r) => [r[0], event.kind, r[1]]);
   }
-  return [...res, ...sendNextTurn(event)];
+  const res2: [string, number, string[][]][] = res.map((r) => [r[0], event.kind, r[1]]);
+  return [...res2, ...sendNextTurn(event)];
 };
 
 const setSutehai = (sute: string, nPlayer: number) => {
@@ -598,7 +615,7 @@ const setSutehai = (sute: string, nPlayer: number) => {
   }
 };
 
-const sendNextTurn = (event: NostrEvent, ronPubkeys: string[] = []): [string, string[][]][] => {
+const sendNextTurn = (event: NostrEvent, ronPubkeys: string[] = []): [string, number, string[][]][] => {
   const res: [string, string[][]][] = [];
   let reason = '';
   //四風子連打
@@ -651,7 +668,8 @@ const sendNextTurn = (event: NostrEvent, ronPubkeys: string[] = []): [string, st
     }
     const tags = [...getTagsAirrep(event), ...getTagsEmoji(emojiHai.join(''))];
     res.push([content, tags]);
-    return [...res, ...goNextKyoku(event, -1, 0, new Map<string, number>(), [], [], arTenpaiPlayerFlag, false)];
+    const res2: [string, number, string[][]][] = res.map((r) => [r[0], event.kind, r[1]]);
+    return [...res2, ...goNextKyoku(event, -1, 0, new Map<string, number>(), [], [], arTenpaiPlayerFlag, false)];
   }
   //流局
   if (arYama[nYamaIndex] === undefined) {
@@ -680,7 +698,8 @@ const sendNextTurn = (event: NostrEvent, ronPubkeys: string[] = []): [string, st
           const emojiHai: string[] = stringToArrayPlain(arTehai[i] + arKawa[i].join(''));
           const tags = [...getTagsAirrep(event), ...getTagsEmoji(emojiHai.join(''))];
           res.push([content, tags]);
-          return [...goNextKyoku(event, -1, 0, new Map<string, number>(), [], point, [], false), ...res];
+          const res2: [string, number, string[][]][] = res.map((r) => [r[0], event.kind, r[1]]);
+          return [...goNextKyoku(event, -1, 0, new Map<string, number>(), [], point, [], false), ...res2];
         }
       }
     }
@@ -702,7 +721,8 @@ const sendNextTurn = (event: NostrEvent, ronPubkeys: string[] = []): [string, st
     }
     const tags = [...getTagsAirrep(event), ...getTagsEmoji(emojiHai.join(''))];
     res.push([content, tags]);
-    return [...goNextKyoku(event, -1, 0, new Map<string, number>(), [], point, arTenpaiPlayerFlag, true), ...res];
+    const res2: [string, number, string[][]][] = res.map((r) => [r[0], event.kind, r[1]]);
+    return [...goNextKyoku(event, -1, 0, new Map<string, number>(), [], point, arTenpaiPlayerFlag, true), ...res2];
   }
   setKyotaku(currentPlayer);
   savedTsumo = arYama[nYamaIndex++];
@@ -716,7 +736,7 @@ const sendNextTurn = (event: NostrEvent, ronPubkeys: string[] = []): [string, st
   const content_sutehai = `${tehaiToEmoji(arTehai[i2])} ${tehaiToEmoji(savedTsumo)}\nnostr:${nip19.npubEncode(players[i2])} GET sutehai?`;
   const tags_sutehai = [...getTagsAirrep(event), ['p', players[i2], ''], ...getTagsEmoji(addHai(arTehai[i2], savedTsumo))];
   res.push([content_sutehai, tags_sutehai]);
-  return res;
+  return res.map((r) => [r[0], event.kind, r[1]]);
 };
 
 const canTsumo = (nPlayer: number, atariHai: string): boolean => {
@@ -795,12 +815,12 @@ const addFuro = (tehai: string, furo: string, s1: string, s2: string): string =>
   }
 };
 
-export const res_s_naku_call = (event: NostrEvent, action: string, pai1: string, pai2: string): [string, string[][]][] | null => {
+export const res_s_naku_call = (event: NostrEvent, action: string, pai1: string, pai2: string): [string, number, string[][]][] | null => {
   const command = 'naku?';
   if (dResponseNeed.get(event.pubkey) !== command) {
     const content = `You are not required to send "${command}"`;
     const tags = getTagsReply(event);
-    return [[content, tags]];
+    return [[content, event.kind, tags]];
   }
   reservedNaku.set(event.pubkey, [action, pai1, pai2]);
   dResponseNeed.set(event.pubkey, '');
@@ -838,7 +858,7 @@ export const res_s_naku_call = (event: NostrEvent, action: string, pai1: string,
   return execNaku(event, pubkey, actions);
 };
 
-const execNaku = (event: NostrEvent, pubkey: string, actions: string[]): [string, string[][]][] => {
+const execNaku = (event: NostrEvent, pubkey: string, actions: string[]): [string, number, string[][]][] => {
   const res: [string, string[][]][] = [];
   const i = players.indexOf(pubkey);
   switch (actions[0]) {
@@ -852,7 +872,8 @@ const execNaku = (event: NostrEvent, pubkey: string, actions: string[]): [string
           res.push(savedDoratsuchi);
           savedDoratsuchi = undefined;
         }
-        return [...res, ...getScoreView(event, i, currentPlayer, savedSutehai, false)];
+        const res2: [string, number, string[][]][] = res.map((r) => [r[0], event.kind, r[1]]);
+        return [...res2, ...getScoreView(event, i, currentPlayer, savedSutehai, false)];
       } else {
         const content = 'You cannot ron.';
         const tags = getTagsReply(event);
@@ -890,7 +911,7 @@ const execNaku = (event: NostrEvent, pubkey: string, actions: string[]): [string
         const content_dora = `${players.map((pubkey) => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY dora ${strDorahyoujiNew}`;
         const tags_dora = [...getTagsAirrep(event), ...players.map((pubkey) => ['p', pubkey, ''])];
         savedDoratsuchi = [content_dora, tags_dora];
-        return res;
+        return res.map((r) => [r[0], event.kind, r[1]]);
       } else {
         const content = 'You cannot kan.';
         const tags = getTagsReply(event);
@@ -916,7 +937,7 @@ const execNaku = (event: NostrEvent, pubkey: string, actions: string[]): [string
         const content3 = `${tehaiToEmoji(arTehai[i])}\nnostr:${nip19.npubEncode(players[i])} GET sutehai?`;
         const tags3 = [...getTagsAirrep(event), ['p', players[i], ''], ...getTagsEmoji(arTehai[i])];
         res.push([content3, tags3]);
-        return res;
+        return res.map((r) => [r[0], event.kind, r[1]]);
       } else {
         const content = 'You cannot pon.';
         const tags = getTagsReply(event);
@@ -953,7 +974,7 @@ const execNaku = (event: NostrEvent, pubkey: string, actions: string[]): [string
         const content3 = `${tehaiToEmoji(arTehai[i])}\nnostr:${nip19.npubEncode(players[i])} GET sutehai?`;
         const tags3 = [...getTagsAirrep(event), ['p', players[i], ''], ...getTagsEmoji(arTehai[i])];
         res.push([content3, tags3]);
-        return res;
+        return res.map((r) => [r[0], event.kind, r[1]]);
       } else {
         const content = 'You cannot chi.';
         const tags = getTagsReply(event);
@@ -969,9 +990,10 @@ const execNaku = (event: NostrEvent, pubkey: string, actions: string[]): [string
     dResponseNeed.set(players[i], 'sutehai?');
     const resKakan = savedKakan;
     savedKakan = undefined;
-    return [...res, ...resKakan];
+    return [...res, ...resKakan].map((r) => [r[0], event.kind, r[1]]);
   }
-  return [...res, ...sendNextTurn(event)];
+  const res2: [string, number, string[][]][] = res.map((r) => [r[0], event.kind, r[1]]);
+  return [...res2, ...sendNextTurn(event)];
 };
 
 const canRon = (nPlayer: number, atariHai: string): boolean => {
@@ -1182,6 +1204,7 @@ export const res_c_naku_call = (event: NostrEvent, action: string[]): [string, s
 };
 
 const reset_game = () => {
+  status = '';
   players.length = 0;
   debugYama = [];
   arScore = [25000, 25000, 25000, 25000];
