@@ -1074,7 +1074,7 @@ const canAnkan = (nPlayer: number, tsumoHai: string, ankanHaiSelected?: string):
     //和了の形が変わる場合
     for (const ankanhai of arAnkanHai) {
       if (ankanhai !== ankanHaiSelected) continue;
-      const tehaiNew = removeHai(addHai(arTehai[nPlayer], tsumoHai), ankanhai.repeat(4)) + `(${ankanhai.repeat(3)})`;
+      const tehaiNew = removeHai(addHai(arTehai[nPlayer], tsumoHai), ankanhai.repeat(4)) + `(${ankanhai.repeat(4)})`;
       const [shanten, arPattern] = getShanten(tehaiNew);
       if (shanten !== 0) {
         continue;
