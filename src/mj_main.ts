@@ -1177,8 +1177,8 @@ export const res_c_sutehai_call = (event: NostrEvent): [string, number, string[]
     action = 'sutehai';
     select = dahai;
   }
-  const content = `nostr:${nip19.npubEncode(event.pubkey)} sutehai? ${action} ${select}\n:${convertEmoji(dahai)}:`;
-  const tags = [...getTagsReply(event), ...getTagsEmoji(dahai)];
+  const content = `nostr:${nip19.npubEncode(event.pubkey)} sutehai? ${action} ${select}\n:${convertEmoji(select)}:`;
+  const tags = [...getTagsReply(event), ...getTagsEmoji(select)];
   return [[content, event.kind, tags]];
 };
 
