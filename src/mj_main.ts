@@ -182,7 +182,16 @@ const startKyoku = (event: NostrEvent): [string, number, string[][]][] => {
     const tags_gameend = [...getTagsAirrep(event), ...players.map((pubkey) => ['p', pubkey, ''])];
     res.push([content_gameend, tags_gameend]);
     //点数表示
-    const content_result = [0, 1, 2, 3].map((i) => `nostr:${nip19.npubEncode(players[i])} ${arScore[i]}`).join('\n');
+    const scoremap = new Map<string, number>([0, 1, 2, 3].map((i) => [players[i], arScore[i]]));
+    let i = 0;
+    const rank = ['🥇', '🥈', '🥉', '🏅'];
+    const r = [];
+    const sortedScoreMap = new Map([...scoremap].sort((a, b) => b[1] - a[1]));
+    for (const [k, v] of sortedScoreMap) {
+      r.push(`${rank[i]} nostr:${nip19.npubEncode(k)} ${v}`);
+      i++;
+    }
+    const content_result = r.join('\n');
     const tags_result = [...getTagsAirrep(event), ...players.map((pubkey) => ['p', pubkey, ''])];
     res.push([content_result, tags_result]);
     reset_game();
