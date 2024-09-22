@@ -1,15 +1,11 @@
 import * as nip19 from 'nostr-tools/nip19';
 import { Signer } from './utils.js';
 
-export const relayUrls: string[] = [
-  'wss://relay.nostr.wirednet.jp/',
-  'wss://yabu.me/',
-  //'wss://nrelay.c-stellar.net/',
-];
+export const relayUrls: string[] = ['wss://relay.nostr.wirednet.jp/', 'wss://yabu.me/'];
 
-export const mahjongChannelId: string = 'c8d5c2709a5670d6f621ac8020ac3e4fc3057a4961a15319f7c0818309407723';
+export const mahjongChannelIds: string[] = ['c8d5c2709a5670d6f621ac8020ac3e4fc3057a4961a15319f7c0818309407723'];
 
-const mahjongServerNsec: string | undefined = process.env.NOSTR_PRIVATE_KEY_JONGBARI;
+const mahjongServerNsecs: (string | undefined)[] = [process.env.NOSTR_PRIVATE_KEY_JONGBARI];
 const mahjongPlayerNsecs: (string | undefined)[] = [
   process.env.NOSTR_PRIVATE_KEY_RINRIN,
   process.env.NOSTR_PRIVATE_KEY_CHUNCHUN,
@@ -25,7 +21,7 @@ export const pubkeysOfRelayOwnerToZap: string[] = [
 ].map((npub) => nip19.decode(npub).data as string);
 
 export const getServerSignerMap = (): Map<string, Signer> => {
-  return getSignerMap([mahjongServerNsec]);
+  return getSignerMap(mahjongServerNsecs);
 };
 
 export const getPlayerSignerMap = (): Map<string, Signer> => {

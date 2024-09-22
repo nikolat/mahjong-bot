@@ -7,7 +7,7 @@ import * as nip57 from 'nostr-tools/nip57';
 import { nip47 } from 'nostr-tools';
 import { hexToBytes } from '@noble/hashes/utils';
 import { type EventPacket, type RxNostr, createRxBackwardReq } from 'rx-nostr';
-import { mahjongChannelId, nostrWalletConnect, pubkeysOfRelayOwnerToZap, relayUrls } from './config.js';
+import { mahjongChannelIds, nostrWalletConnect, pubkeysOfRelayOwnerToZap, relayUrls } from './config.js';
 import { stringToArrayPlain } from './mjlib/mj_common.js';
 
 export const enum Mode {
@@ -67,7 +67,7 @@ export const sendBootReaction = (rxNostr: RxNostr, serverSigner: Signer) => {
   rxReqB.emit({
     kinds: [42],
     '#p': [serverSigner.getPublicKey()],
-    '#e': [mahjongChannelId],
+    '#e': mahjongChannelIds,
     until: Math.floor(Date.now() / 1000),
     limit: 1,
   });
@@ -76,6 +76,11 @@ export const sendBootReaction = (rxNostr: RxNostr, serverSigner: Signer) => {
 
 export const sendRequestPassport = (rxNostr: RxNostr, signer: Signer) => {
   const npub_yabumi = 'npub1823chanrkmyrfgz2v4pwmu22s8fjy0s9ps7vnd68n7xgd8zr9neqlc2e5r';
+  const mahjongChannelId = mahjongChannelIds.at(0);
+  if (mahjongChannelId === undefined) {
+    console.warn('mahjongChannelIds is undefined');
+    return;
+  }
   const requestEvent: VerifiedEvent = signer.finishEvent({
     kind: 42,
     tags: [

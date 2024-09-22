@@ -6,7 +6,7 @@ import { verifier } from 'rx-nostr-crypto';
 import { Subject } from 'rxjs';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { getNowWithoutSecond, Mode, sendBootReaction, sendRequestPassport, Signer, zapSplit } from './utils.js';
-import { relayUrls, isDebug, getServerSignerMap, getPlayerSignerMap, mahjongChannelId } from './config.js';
+import { relayUrls, isDebug, getServerSignerMap, getPlayerSignerMap, mahjongChannelIds } from './config.js';
 import { getResponseEvent } from './response.js';
 import { page } from './page.js';
 
@@ -75,7 +75,15 @@ const main = async () => {
   const nextF3 = (packet: EventPacket) => {
     console.log('[Zap]');
     console.log(packet);
-    zapSplit(rxNostr, packet.event, serverSigner);
+    const pubkey = packet.event.tags.find((tag) => tag.length >= 2 && tag[0] === 'p')?.at(1);
+    if (pubkey === undefined) {
+      return;
+    }
+    const signer = serverSigners.find((signer) => signer.getPublicKey() === pubkey);
+    if (signer === undefined) {
+      return;
+    }
+    zapSplit(rxNostr, packet.event, signer);
   };
 
   const nextF = (packet: EventPacket) => {
@@ -94,9 +102,11 @@ const main = async () => {
     }
   };
 
-  const serverSigner = Array.from(serverSignerMap.values()).at(0)!;
+  const serverSigners = Array.from(serverSignerMap.values());
   if (!isDebug) {
-    sendBootReaction(rxNostr, serverSigner);
+    for (const serverSigner of serverSigners) {
+      sendBootReaction(rxNostr, serverSigner);
+    }
   }
   //イベントの監視
   const flushes$ = new Subject<void>();
@@ -111,12 +121,12 @@ const main = async () => {
     {
       kinds: [42],
       '#p': Array.from(signerMap.keys()),
-      '#e': [mahjongChannelId],
+      '#e': mahjongChannelIds,
       since: now,
     },
     {
       kinds: [9735],
-      '#p': [serverSigner.getPublicKey()],
+      '#p': Array.from(serverSignerMap.keys()),
       since: now,
     },
   ]);

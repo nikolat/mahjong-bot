@@ -1,21 +1,12 @@
 import { getEventHash, type UnsignedEvent, type EventTemplate, type NostrEvent, type VerifiedEvent } from 'nostr-tools/pure';
 import * as nip19 from 'nostr-tools/nip19';
 import { Mode, Signer, getTagsAirrep, getTagsReply } from './utils.js';
-import {
-  res_c_naku_call,
-  res_c_sutehai_call,
-  res_s_debug_call,
-  res_s_gamestart_call,
-  res_s_join_call,
-  res_s_naku_call,
-  res_s_next_call,
-  res_s_reset_call,
-  res_s_status_call,
-  res_s_sutehai_call,
-} from './mj_main.js';
+import { MahjongCore } from './mj_main.js';
 import { getServerSignerMap } from './config.js';
 
 const status_kind = 30315;
+
+const channelMahjongCoreMap = new Map<string, MahjongCore>();
 
 export const getResponseEvent = async (requestEvent: NostrEvent, signer: Signer, mode: Mode): Promise<VerifiedEvent[] | null> => {
   if (requestEvent.pubkey === signer.getPublicKey()) {
@@ -143,20 +134,33 @@ const res_help = (event: NostrEvent): [string, number, string[][]][] => {
   return [[content.join('\n'), event.kind, getTagsReply(event)]];
 };
 
+const getCore = (event: NostrEvent): MahjongCore => {
+  const channedId = event.tags.find((tag) => tag.length >= 3 && tag[0] === 'e' && tag[3] === 'root')?.at(1);
+  if (channedId === undefined) {
+    throw new Error();
+  }
+  let core = channelMahjongCoreMap.get(channedId);
+  if (core === undefined) {
+    core = new MahjongCore();
+    channelMahjongCoreMap.set(channedId, core);
+  }
+  return core;
+};
+
 const res_s_gamestart = (event: NostrEvent): [string, number, string[][]][] | null => {
-  return res_s_gamestart_call(event);
+  return getCore(event).res_s_gamestart_call(event);
 };
 
 const res_s_join = (event: NostrEvent): [string, number, string[][]][] | null => {
-  return res_s_join_call(event);
+  return getCore(event).res_s_join_call(event);
 };
 
 const res_s_next = (event: NostrEvent): [string, number, string[][]][] | null => {
-  return res_s_next_call(event);
+  return getCore(event).res_s_next_call(event);
 };
 
 const res_s_reset = (event: NostrEvent): [string, number, string[][]][] | null => {
-  res_s_reset_call();
+  getCore(event).res_s_reset_call();
   return [
     ['Data cleared.', event.kind, getTagsAirrep(event)],
     ['', status_kind, [['d', 'general']]],
@@ -164,7 +168,7 @@ const res_s_reset = (event: NostrEvent): [string, number, string[][]][] | null =
 };
 
 const res_s_status = (event: NostrEvent): [string, number, string[][]][] | null => {
-  return res_s_status_call(event);
+  return getCore(event).res_s_status_call(event);
 };
 
 const res_s_debug = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, number, string[][]][] | null => {
@@ -173,7 +177,7 @@ const res_s_debug = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, nu
     throw new Error();
   }
   const yama: string = match[1];
-  res_s_debug_call(yama);
+  getCore(event).res_s_debug_call(yama);
   return [['Debug mode.', event.kind, getTagsAirrep(event)]];
 };
 
@@ -187,7 +191,7 @@ const res_s_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, 
   if (action !== 'tsumo' && !pai) {
     return [['usage: sutehai? sutehai <pi>', event.kind, getTagsReply(event)]];
   }
-  return res_s_sutehai_call(event, action, pai);
+  return getCore(event).res_s_sutehai_call(event, action, pai);
 };
 
 const res_s_naku = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, number, string[][]][] | null => {
@@ -201,7 +205,7 @@ const res_s_naku = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, num
   if (action === 'chi' && !(/[1-9][mspz]/.test(pai1) && /[1-9][mspz]/.test(pai2))) {
     return [['usage: naku? chi <pi1> <pi2>', event.kind, getTagsReply(event)]];
   }
-  return res_s_naku_call(event, action, pai1, pai2);
+  return getCore(event).res_s_naku_call(event, action, pai1, pai2);
 };
 
 const serverPubkey = Array.from(getServerSignerMap().keys()).at(0)!;
@@ -215,7 +219,7 @@ const res_c_gamestart = (event: NostrEvent): [string, number, string[][]][] => {
 };
 
 const res_c_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, number, string[][]][] => {
-  return res_c_sutehai_call(event);
+  return getCore(event).res_c_sutehai_call(event);
 };
 
 const res_c_naku = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, number, string[][]][] => {
@@ -224,5 +228,5 @@ const res_c_naku = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, num
     throw new Error();
   }
   const command = match[1].split(/\s/);
-  return res_c_naku_call(event, command);
+  return getCore(event).res_c_naku_call(event, command);
 };
