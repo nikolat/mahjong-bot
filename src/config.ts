@@ -3,7 +3,10 @@ import { Signer } from './utils.js';
 
 export const relayUrls: string[] = ['wss://relay.nostr.wirednet.jp/', 'wss://yabu.me/'];
 
-export const mahjongChannelIds: string[] = ['c8d5c2709a5670d6f621ac8020ac3e4fc3057a4961a15319f7c0818309407723'];
+export const mahjongChannelIds: string[] = [
+  'c8d5c2709a5670d6f621ac8020ac3e4fc3057a4961a15319f7c0818309407723',
+  '06ddcb27b27f667d6487b5128625f25cb2148cf87bff0502aaffe5ca705dc626',
+];
 
 const mahjongServerNsecs: (string | undefined)[] = [process.env.NOSTR_PRIVATE_KEY_JONGBARI];
 const mahjongPlayerNsecs: (string | undefined)[] = [
