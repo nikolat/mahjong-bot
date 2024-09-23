@@ -109,8 +109,9 @@ export class MahjongCore {
     this.#reset_game();
     this.#players.push(event.pubkey);
     this.#status = '募集中 1/4';
+    const channedId = event.tags.find((tag) => tag.length >= 4 && tag[0] === 'e' && tag[3] === 'root')?.at(1)!;
     return [
-      [this.#status, this.#status_kind, [['d', 'general']]],
+      [this.#status, this.#status_kind, [['d', channedId]]],
       ['Waiting for players.\nMention "join" to me.', event.kind, getTagsAirrep(event)],
     ];
   };
@@ -130,8 +131,9 @@ export class MahjongCore {
       return this.mahjongGameStart(event);
     } else {
       this.#status = `募集中 ${this.#players.length}/4`;
+      const channedId = event.tags.find((tag) => tag.length >= 4 && tag[0] === 'e' && tag[3] === 'root')?.at(1)!;
       return [
-        [this.#status, this.#status_kind, [['d', 'general']]],
+        [this.#status, this.#status_kind, [['d', channedId]]],
         [`${this.#players.length}/4 joined.`, event.kind, getTagsAirrep(event)],
       ];
     }
@@ -236,7 +238,8 @@ export class MahjongCore {
       res.push([content_result, tags_result]);
       this.#reset_game();
       const res2: [string, number, string[][]][] = res.map((r) => [r[0], event.kind, r[1]]);
-      return [['', this.#status_kind, [['d', 'general']]], ...res2];
+      const channedId = event.tags.find((tag) => tag.length >= 4 && tag[0] === 'e' && tag[3] === 'root')?.at(1)!;
+      return [['', this.#status_kind, [['d', channedId]]], ...res2];
     }
     this.#status = '対局中';
     if (this.#debugYama.length > 0) {
@@ -306,7 +309,8 @@ export class MahjongCore {
     ];
     res.push([content_sutehai, tags_sutehai]);
     const res2: [string, number, string[][]][] = res.map((r) => [r[0], event.kind, r[1]]);
-    return [[this.#status, this.#status_kind, [['d', 'general']]], ...res2];
+    const channedId = event.tags.find((tag) => tag.length >= 4 && tag[0] === 'e' && tag[3] === 'root')?.at(1)!;
+    return [[this.#status, this.#status_kind, [['d', channedId]]], ...res2];
   };
 
   #tehaiToEmoji = (tehai: string): string => {
@@ -491,7 +495,8 @@ export class MahjongCore {
       }
     }
     const res2: [string, number, string[][]][] = res.map((r) => [r[0], event.kind, r[1]]);
-    return [[this.#status, this.#status_kind, [['d', 'general']]], ...res2];
+    const channedId = event.tags.find((tag) => tag.length >= 4 && tag[0] === 'e' && tag[3] === 'root')?.at(1)!;
+    return [[this.#status, this.#status_kind, [['d', channedId]]], ...res2];
   };
 
   #getJifuHai = (nPlayer: number): string => {

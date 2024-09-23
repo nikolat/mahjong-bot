@@ -161,9 +161,10 @@ const res_s_next = (event: NostrEvent): [string, number, string[][]][] | null =>
 
 const res_s_reset = (event: NostrEvent): [string, number, string[][]][] | null => {
   getCore(event).res_s_reset_call();
+  const channedId = event.tags.find((tag) => tag.length >= 4 && tag[0] === 'e' && tag[3] === 'root')?.at(1)!;
   return [
     ['Data cleared.', event.kind, getTagsAirrep(event)],
-    ['', status_kind, [['d', 'general']]],
+    ['', status_kind, [['d', channedId]]],
   ];
 };
 
