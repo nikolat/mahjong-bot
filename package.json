@@ -16,19 +16,19 @@
     "start": "node ./dist/main.js"
   },
   "dependencies": {
-    "express": "^4.21.0",
-    "nostr-tools": "^2.7.2",
+    "express": "^4.21.1",
+    "nostr-tools": "^2.10.0",
     "rx-nostr": "^3.4.0",
     "rx-nostr-crypto": "^3.1.2",
     "ws": "^8.18.0"
   },
   "devDependencies": {
-    "@types/express": "^4.17.21",
-    "@types/node": "^22.5.5",
-    "@types/ws": "^8.5.12",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.8.6",
+    "@types/ws": "^8.5.13",
     "prettier": "^3.3.3",
     "ts-node": "^10.9.2",
-    "typescript": "^5.6.2"
+    "typescript": "^5.6.3"
   },
   "engines": {
     "node": ">=20.11.1 <21.0.0"
