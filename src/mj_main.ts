@@ -32,8 +32,7 @@ import { convertEmoji, getEmojiTag, getScoreAdd, getScoreAddWithPao, getTagsAirr
 
 export class MahjongCore {
   #status_kind = 30315;
-  #arBafu = ['東', '南'];
-
+  #arBafu: string[];
   #debugYama: string[];
   #status: string;
   #players: string[];
@@ -67,7 +66,8 @@ export class MahjongCore {
   #reservedNaku: Map<string, string[]>;
   #dResponseNeed: Map<string, string>;
 
-  constructor() {
+  constructor(bafuLength: number = 2) {
+    this.#arBafu = ['東', '南', '西', '北'].slice(0, bafuLength);
     this.#debugYama = [];
     this.#status = '';
     this.#players = [];
@@ -217,8 +217,7 @@ export class MahjongCore {
 
   #startKyoku = (event: NostrEvent): [string, number, string[][]][] => {
     const res: [string, string[][]][] = [];
-    if (this.#bafu >= 2) {
-      //東場、南場
+    if (this.#bafu >= this.#arBafu.length) {
       //gameend通知
       const content_gameend = `${this.#players.map((pubkey) => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} NOTIFY gameend ${[0, 1, 2, 3].map((i) => `nostr:${nip19.npubEncode(this.#players[i])} ${this.#arScore[i]}`).join(' ')}`;
       const tags_gameend = [...getTagsAirrep(event), ...this.#players.map((pubkey) => ['p', pubkey, ''])];

@@ -8,6 +8,14 @@ export const mahjongChannelIds: string[] = [
   '06ddcb27b27f667d6487b5128625f25cb2148cf87bff0502aaffe5ca705dc626',
 ];
 
+export const getBafuLength = (channelId: string): number => {
+  const r = new Map<string, number>([
+    [mahjongChannelIds[0], 2], //半荘戦
+    [mahjongChannelIds[1], 1], //東風戦
+  ]);
+  return r.get(channelId) ?? 2;
+};
+
 const mahjongServerNsecs: (string | undefined)[] = [process.env.NOSTR_PRIVATE_KEY_JONGBARI];
 const mahjongPlayerNsecs: (string | undefined)[] = [
   process.env.NOSTR_PRIVATE_KEY_RINRIN,

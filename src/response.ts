@@ -2,7 +2,7 @@ import { getEventHash, type UnsignedEvent, type EventTemplate, type NostrEvent, 
 import * as nip19 from 'nostr-tools/nip19';
 import { Mode, Signer, getTagsAirrep, getTagsReply } from './utils.js';
 import { MahjongCore } from './mj_main.js';
-import { getServerSignerMap } from './config.js';
+import { getBafuLength, getServerSignerMap } from './config.js';
 
 const status_kind = 30315;
 
@@ -141,7 +141,7 @@ const getCore = (event: NostrEvent): MahjongCore => {
   }
   let core = channelMahjongCoreMap.get(channedId);
   if (core === undefined) {
-    core = new MahjongCore();
+    core = new MahjongCore(getBafuLength(channedId));
     channelMahjongCoreMap.set(channedId, core);
   }
   return core;
