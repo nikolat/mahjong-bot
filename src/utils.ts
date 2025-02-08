@@ -236,40 +236,32 @@ const getGeneralEvents = (rxNostr: RxNostr, filters: Filter[]): Promise<NostrEve
 };
 
 export const getTagsAirrep = (event: NostrEvent): string[][] => {
-  if (event.kind === 1) {
-    return [['e', event.id, '', 'mention']];
-  } else if (event.kind === 42) {
-    const tagRoot = event.tags.find((tag) => tag.length >= 3 && tag[0] === 'e' && tag[3] === 'root');
-    if (tagRoot !== undefined) {
-      return [tagRoot, ['e', event.id, '', 'mention']];
-    } else {
-      throw new TypeError('root is not found');
-    }
-  }
-  throw new TypeError(`kind ${event.kind} is not supported`);
+  return getTagsReply(event, false);
 };
 
-export const getTagsReply = (event: NostrEvent): string[][] => {
+export const getTagsReply = (event: NostrEvent, addPTag: boolean = true): string[][] => {
   const tagsReply: string[][] = [];
-  const tagRoot = event.tags.find((tag) => tag.length >= 4 && tag[0] === 'e' && tag[3] === 'root');
+  const tagRoot = event.tags.find((tag: string[]) => tag.length >= 4 && tag[0] === 'e' && tag[3] === 'root');
   if (tagRoot !== undefined) {
     tagsReply.push(tagRoot);
-    tagsReply.push(['e', event.id, '', 'reply']);
+    tagsReply.push(['e', event.id, '', 'reply', event.pubkey]);
   } else {
-    tagsReply.push(['e', event.id, '', 'root']);
+    tagsReply.push(['e', event.id, '', 'root', event.pubkey]);
   }
-  for (const tag of event.tags.filter((tag) => tag.length >= 2 && tag[0] === 'p' && tag[1] !== event.pubkey)) {
-    tagsReply.push(tag);
+  if (addPTag) {
+    for (const tag of event.tags.filter((tag: string[]) => tag.length >= 2 && tag[0] === 'p' && tag[1] !== event.pubkey)) {
+      tagsReply.push(tag);
+    }
+    tagsReply.push(['p', event.pubkey]);
   }
-  tagsReply.push(['p', event.pubkey, '']);
   return tagsReply;
 };
 
 export const getTagsFav = (event: NostrEvent): string[][] => {
   const tagsFav: string[][] = [
     ...event.tags.filter((tag) => tag.length >= 2 && (tag[0] === 'e' || (tag[0] === 'p' && tag[1] !== event.pubkey))),
-    ['e', event.id, '', ''],
-    ['p', event.pubkey, ''],
+    ['e', event.id],
+    ['p', event.pubkey],
     ['k', String(event.kind)],
   ];
   return tagsFav;

@@ -1,6 +1,5 @@
 import type { VerifiedEvent } from 'nostr-tools/pure';
 import * as nip19 from 'nostr-tools/nip19';
-import WebSocket from 'ws';
 import { createRxForwardReq, createRxNostr, uniq, type EventPacket } from 'rx-nostr';
 import { verifier } from 'rx-nostr-crypto';
 import { Subject } from 'rxjs';
