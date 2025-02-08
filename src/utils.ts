@@ -63,7 +63,7 @@ export const sendBootReaction = (rxNostr: RxNostr, serverSigner: Signer) => {
       console.log(packet);
     });
   };
-  const subscriptionB = rxNostr.use(rxReqB).subscribe({ next: nextB, complete });
+  const _subscriptionB = rxNostr.use(rxReqB).subscribe({ next: nextB, complete });
   rxReqB.emit({
     kinds: [42],
     '#p': [serverSigner.getPublicKey()],
@@ -123,7 +123,7 @@ export const zapSplit = async (rxNostr: RxNostr, event: NostrEvent, signer: Sign
   }
   const url = `https://${m[2]}/.well-known/lnurlp/${m[1]}`;
   const response = await fetch(url);
-  const json: any = await response.json();
+  const json = await response.json();
   const nostrPubkey: string = json.nostrPubkey;
   if (!nostrPubkey) {
     console.warn('nostrPubkey does not exist');
@@ -310,7 +310,7 @@ const getEmojiUrl = (pai: string): string => {
   return awayuki_mahjong_emojis[convertEmoji(pai)];
 };
 
-const awayuki_mahjong_emojis: any = {
+const awayuki_mahjong_emojis: { [shortcode: string]: string } = {
   mahjong_m1: 'https://awayuki.github.io/emoji/mahjong-m1.png',
   mahjong_m2: 'https://awayuki.github.io/emoji/mahjong-m2.png',
   mahjong_m3: 'https://awayuki.github.io/emoji/mahjong-m3.png',

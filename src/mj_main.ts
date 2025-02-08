@@ -109,7 +109,7 @@ export class MahjongCore {
     this.#reset_game();
     this.#players.push(event.pubkey);
     this.#status = '募集中 1/4';
-    const channedId = event.tags.find((tag) => tag.length >= 4 && tag[0] === 'e' && tag[3] === 'root')?.at(1)!;
+    const channedId = event.tags.find((tag) => tag.length >= 4 && tag[0] === 'e' && tag[3] === 'root')?.at(1) ?? '';
     return [
       [this.#status, this.#status_kind, [['d', channedId]]],
       ['Waiting for players.\nMention "join" to me.', event.kind, getTagsAirrep(event)],
@@ -131,7 +131,7 @@ export class MahjongCore {
       return this.mahjongGameStart(event);
     } else {
       this.#status = `募集中 ${this.#players.length}/4`;
-      const channedId = event.tags.find((tag) => tag.length >= 4 && tag[0] === 'e' && tag[3] === 'root')?.at(1)!;
+      const channedId = event.tags.find((tag) => tag.length >= 4 && tag[0] === 'e' && tag[3] === 'root')?.at(1) ?? '';
       return [
         [this.#status, this.#status_kind, [['d', channedId]]],
         [`${this.#players.length}/4 joined.`, event.kind, getTagsAirrep(event)],
@@ -237,7 +237,7 @@ export class MahjongCore {
       res.push([content_result, tags_result]);
       this.#reset_game();
       const res2: [string, number, string[][]][] = res.map((r) => [r[0], event.kind, r[1]]);
-      const channedId = event.tags.find((tag) => tag.length >= 4 && tag[0] === 'e' && tag[3] === 'root')?.at(1)!;
+      const channedId = event.tags.find((tag) => tag.length >= 4 && tag[0] === 'e' && tag[3] === 'root')?.at(1) ?? '';
       return [['', this.#status_kind, [['d', channedId]]], ...res2];
     }
     this.#status = '対局中';
@@ -273,7 +273,6 @@ export class MahjongCore {
     this.#reservedNaku = new Map<string, string[]>();
     //	reservedTenpai = new Map<string, string>();
     this.#dResponseNeed = new Map<string, string>(this.#players.map((p) => [p, '']));
-    let s: string = '';
     //kyokustart通知
     const content = `${this.#players.map((pubkey) => `nostr:${nip19.npubEncode(pubkey)}`).join(' ')} #kyokustart NOTIFY kyokustart ${this.#arBafu[this.#bafu]} nostr:${nip19.npubEncode(this.#players[this.#oyaIndex])} ${this.#tsumibou} ${1000 * this.#kyotaku}`;
     const tags = [...getTagsAirrep(event), ...this.#players.map((pubkey) => ['p', pubkey, '']), ['t', 'kyokustart']];
@@ -308,7 +307,7 @@ export class MahjongCore {
     ];
     res.push([content_sutehai, tags_sutehai]);
     const res2: [string, number, string[][]][] = res.map((r) => [r[0], event.kind, r[1]]);
-    const channedId = event.tags.find((tag) => tag.length >= 4 && tag[0] === 'e' && tag[3] === 'root')?.at(1)!;
+    const channedId = event.tags.find((tag) => tag.length >= 4 && tag[0] === 'e' && tag[3] === 'root')?.at(1) ?? '';
     return [[this.#status, this.#status_kind, [['d', channedId]]], ...res2];
   };
 
@@ -494,7 +493,7 @@ export class MahjongCore {
       }
     }
     const res2: [string, number, string[][]][] = res.map((r) => [r[0], event.kind, r[1]]);
-    const channedId = event.tags.find((tag) => tag.length >= 4 && tag[0] === 'e' && tag[3] === 'root')?.at(1)!;
+    const channedId = event.tags.find((tag) => tag.length >= 4 && tag[0] === 'e' && tag[3] === 'root')?.at(1) ?? '';
     return [[this.#status, this.#status_kind, [['d', channedId]]], ...res2];
   };
 
@@ -556,7 +555,7 @@ export class MahjongCore {
           return [[content, event.kind, tags]];
         }
         break;
-      case 'sutehai':
+      case 'sutehai': {
         const sutehaikouho = stringToArrayWithFuro(addHai(this.#arTehai[i], this.#savedTsumo))[0];
         if (sutehaikouho.includes(pai) && !(this.#arRichiJunme[i] >= 0 && pai !== this.#savedTsumo)) {
           this.#savedSutehai = pai;
@@ -567,6 +566,7 @@ export class MahjongCore {
           return [[content, event.kind, tags]];
         }
         break;
+      }
       case 'ankan':
         if (this.#canAnkan(i, this.#savedTsumo, pai)) {
           this.#arTehai[i] = addHai(this.#arTehai[i], this.#savedTsumo);
@@ -926,7 +926,7 @@ export class MahjongCore {
     }
     this.#reservedNaku.set(event.pubkey, [action, pai1, pai2]);
     this.#dResponseNeed.set(event.pubkey, '');
-    for (const [k, v] of this.#dResponseNeed) {
+    for (const v of this.#dResponseNeed.values()) {
       if (v !== '') {
         return null;
       }
@@ -934,7 +934,7 @@ export class MahjongCore {
     //副露の優先順位を考慮
     let pubkey: string | undefined;
     let actions: string[] | undefined;
-    let ronPubkeys: string[] = [];
+    const ronPubkeys: string[] = [];
     for (const [k, v] of this.#reservedNaku) {
       if (v[0] === 'ron') {
         ronPubkeys.push(k);

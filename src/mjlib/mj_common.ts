@@ -84,7 +84,7 @@ export const addFuro = (tehai: string, furo: string, s1: string, s2: string): st
   const sortedFuro = stringToArrayWithFuro(furo)[0];
   sortedFuro.sort(compareFn);
   const strFuro = sortedFuro.join('');
-  const index = tehai.search(/[<\(]/);
+  const index = tehai.search(/[<(]/);
   if (index >= 0) {
     return tehai.slice(0, index) + s1 + strFuro + s2 + tehai.slice(index);
   } else {
@@ -118,7 +118,7 @@ export const removeElementByName = (ary: string[], name: string, count: number) 
 export const uniq = (ary: string[][]) => {
   const ret: string[][] = [];
   const retCheck: string[] = [];
-  for (let elm of ary) {
+  for (const elm of ary) {
     const key = removeElementByName(elm, '', 1);
     key.sort();
     if (!retCheck.includes(key.join(','))) {

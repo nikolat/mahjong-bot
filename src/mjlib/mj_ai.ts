@@ -275,7 +275,7 @@ export const shouldDaiminkan = (): boolean => {
 };
 
 export const countKantsu = (tehai: string) => {
-  const [normal, furo, ankan] = stringToArrayWithFuro(tehai);
+  const [_normal, furo, ankan] = stringToArrayWithFuro(tehai);
   return furo.filter((s) => s.length === 8).length + ankan.length;
 };
 

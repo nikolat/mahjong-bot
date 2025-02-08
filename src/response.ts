@@ -30,7 +30,7 @@ const mineNonceForSort = (events: UnsignedEvent[]): UnsignedEvent[] => {
   const id_max = parseInt('f'.repeat(64), 16);
   const diff = id_max / events.length;
   let i = 0;
-  for (let ev of [...events].reverse()) {
+  for (const ev of [...events].reverse()) {
     let nonce_n = 0;
     while (!(diff * i <= parseInt(getEventHash(ev), 16) && parseInt(getEventHash(ev), 16) < diff * (i + 1))) {
       const nonceTag = ev.tags.find((tag) => tag.length >= 2 && tag[0] === 'nonce');
@@ -161,7 +161,7 @@ const res_s_next = (event: NostrEvent): [string, number, string[][]][] | null =>
 
 const res_s_reset = (event: NostrEvent): [string, number, string[][]][] | null => {
   getCore(event).res_s_reset_call();
-  const channedId = event.tags.find((tag) => tag.length >= 4 && tag[0] === 'e' && tag[3] === 'root')?.at(1)!;
+  const channedId = event.tags.find((tag) => tag.length >= 4 && tag[0] === 'e' && tag[3] === 'root')?.at(1) ?? '';
   return [
     ['Data cleared.', event.kind, getTagsAirrep(event)],
     ['', status_kind, [['d', channedId]]],
@@ -219,7 +219,7 @@ const res_c_gamestart = (event: NostrEvent): [string, number, string[][]][] => {
   return [[`nostr:${nip19.npubEncode(serverPubkey)} gamestart`, event.kind, [...getTagsAirrep(event), ['p', serverPubkey]]]];
 };
 
-const res_c_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, number, string[][]][] => {
+const res_c_sutehai = (event: NostrEvent, _mode: Mode, _regstr: RegExp): [string, number, string[][]][] => {
   return getCore(event).res_c_sutehai_call(event);
 };
 

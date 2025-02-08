@@ -22,7 +22,7 @@ const main = async () => {
   rxNostr.setDefaultRelays(relayUrls);
 
   let lastKind1Time = getNowWithoutSecond();
-  const nextF1 = async (packet: EventPacket) => {
+  const nextF1 = async (_packet: EventPacket) => {
     //do not sleep
     const nowKind1Time = getNowWithoutSecond();
     if (lastKind1Time < nowKind1Time) {
@@ -111,7 +111,7 @@ const main = async () => {
   const flushes$ = new Subject<void>();
   const now = Math.floor(Date.now() / 1000);
   const rxReqF = createRxForwardReq();
-  const subscriptionF = rxNostr.use(rxReqF).pipe(uniq(flushes$)).subscribe(nextF);
+  const _subscriptionF = rxNostr.use(rxReqF).pipe(uniq(flushes$)).subscribe(nextF);
   rxReqF.emit([
     {
       kinds: [1],

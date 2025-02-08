@@ -122,7 +122,7 @@ export const getShantenNormal = (tehai: string): [number, string[]] => {
   }
   //重複を除く
   let ret_composition_split: string[][] = [];
-  for (let rc of ret_composition) {
+  for (const rc of ret_composition) {
     ret_composition_split.push(rc.split(','));
   }
   ret_composition_split = uniq(ret_composition_split);
@@ -256,8 +256,9 @@ const getComposition = (haiArray: string[]): number[][][] => {
   const start = 1;
   let composition_a: number[][][] = [];
   let composition_b: number[][][] = [];
-  let max: number[][];
-  [max, composition_a, composition_b] = getCompositionRecursion(hai_count_array, start, composition_a, composition_b);
+  const r = getCompositionRecursion(hai_count_array, start, composition_a, composition_b);
+  composition_a = r[1];
+  composition_b = r[2];
   const ret: number[][][] = [...composition_a, ...composition_b];
   return ret;
 };
@@ -326,13 +327,10 @@ const getCompositionRecursion = (
     for (let i = 0; i < ret_b_shuntsu.length; i++) {
       ret_b_shuntsu[i].push([n, n + 1, n + 2]);
     }
-    let r;
-    [r, ret_a_shuntsu, ret_b_shuntsu] = getCompositionRecursion(
-      structuredClone(hai),
-      n,
-      structuredClone(ret_a_shuntsu),
-      structuredClone(ret_b_shuntsu),
-    ); //抜き取ったら同じ位置でもう一度試行
+    const cr = getCompositionRecursion(structuredClone(hai), n, structuredClone(ret_a_shuntsu), structuredClone(ret_b_shuntsu)); //抜き取ったら同じ位置でもう一度試行
+    const r: number[][] = cr[0];
+    ret_a_shuntsu = cr[1];
+    ret_b_shuntsu = cr[2];
     hai[n]++;
     hai[n + 1]++;
     hai[n + 2]++;
@@ -370,13 +368,10 @@ const getCompositionRecursion = (
     for (let i = 0; i < ret_b_kotsu.length; i++) {
       ret_b_kotsu[i].push([n, n, n]);
     }
-    let r;
-    [r, ret_a_kotsu, ret_b_kotsu] = getCompositionRecursion(
-      structuredClone(hai),
-      n,
-      structuredClone(ret_a_kotsu),
-      structuredClone(ret_b_kotsu),
-    ); //抜き取ったら同じ位置でもう一度試行
+    const cr = getCompositionRecursion(structuredClone(hai), n, structuredClone(ret_a_kotsu), structuredClone(ret_b_kotsu)); //抜き取ったら同じ位置でもう一度試行
+    const r: number[][] = cr[0];
+    ret_a_kotsu = cr[1];
+    ret_b_kotsu = cr[2];
     hai[n] += 3;
     r[0][0]++;
     r[1][0]++; //各パターンの面子の数を1増やす
@@ -585,7 +580,7 @@ export const getShantenKokushimusou = (tehai: string): number => {
 
 //門前清自摸和
 const getShantenMenzen = (tehai: string): number => {
-  const [hai_normal, hai_furo, hai_ankan] = stringToArrayWithFuro(tehai);
+  const [_hai_normal, hai_furo, _hai_ankan] = stringToArrayWithFuro(tehai);
   if (hai_furo.length > 0) return SHANTEN_MAX;
   return getShanten(tehai)[0];
 };
@@ -607,7 +602,7 @@ const getShantenYakuhai = (tehai: string, bafu_hai: string, jifu_hai: string): n
   }
   for (const h of hai_ankan) {
     const hai = h.slice(0, 2);
-    if (yakuhai.includes(h)) has_yakuhai_kotsu = true;
+    if (yakuhai.includes(hai)) has_yakuhai_kotsu = true;
   }
   if (has_yakuhai_kotsu) return getShanten(tehai)[0];
   const toitsu = getToitsu(hai_normal);
