@@ -212,11 +212,11 @@ const res_s_naku = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, num
 const serverPubkey = Array.from(getServerSignerMap().keys()).at(0)!;
 
 const res_c_join = (event: NostrEvent): [string, number, string[][]][] => {
-  return [[`nostr:${nip19.npubEncode(serverPubkey)} join`, event.kind, [...getTagsAirrep(event), ['p', serverPubkey, '']]]];
+  return [[`nostr:${nip19.npubEncode(serverPubkey)} join`, event.kind, [...getTagsAirrep(event), ['p', serverPubkey]]]];
 };
 
 const res_c_gamestart = (event: NostrEvent): [string, number, string[][]][] => {
-  return [[`nostr:${nip19.npubEncode(serverPubkey)} gamestart`, event.kind, [...getTagsAirrep(event), ['p', serverPubkey, '']]]];
+  return [[`nostr:${nip19.npubEncode(serverPubkey)} gamestart`, event.kind, [...getTagsAirrep(event), ['p', serverPubkey]]]];
 };
 
 const res_c_sutehai = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, number, string[][]][] => {
