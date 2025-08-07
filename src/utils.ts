@@ -197,8 +197,7 @@ const zapByNIP47 = async (rxNostr: RxNostr, pubkey: string, signer: Signer, sats
   }
   const amount = sats * 1000;
   const zapRequest = nip57.makeZapRequest({
-    profile: pubkey,
-    event: null,
+    pubkey,
     amount,
     comment: zapComment,
     relays: relayUrls,
@@ -259,7 +258,7 @@ export const getTagsReply = (event: NostrEvent, addPTag: boolean = true): string
 
 export const getTagsFav = (event: NostrEvent): string[][] => {
   const tagsFav: string[][] = [
-    ['e', event.id],
+    ['e', event.id, '', event.pubkey],
     ['p', event.pubkey],
     ['k', String(event.kind)],
   ];

@@ -1,7 +1,7 @@
 import type { VerifiedEvent } from 'nostr-tools/pure';
 import * as nip19 from 'nostr-tools/nip19';
 import { createRxForwardReq, createRxNostr, uniq, type EventPacket } from 'rx-nostr';
-import { verifier } from 'rx-nostr-crypto';
+import { verifier } from '@rx-nostr/crypto';
 import { Subject } from 'rxjs';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { getNowWithoutSecond, Mode, sendBootReaction, sendRequestPassport, Signer, zapSplit } from './utils.js';
