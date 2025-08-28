@@ -91,6 +91,7 @@ const main = async () => {
         nextF1(packet);
         break;
       case 42:
+      case 20000:
         nextF2(packet);
         break;
       case 9735:
@@ -118,7 +119,7 @@ const main = async () => {
       since: now,
     },
     {
-      kinds: [42],
+      kinds: [42, 20000],
       '#p': Array.from(signerMap.keys()),
       '#e': mahjongChannelIds,
       since: now,

@@ -253,6 +253,9 @@ export const getTagsReply = (event: NostrEvent, addPTag: boolean = true): string
     }
     tagsReply.push(['p', event.pubkey]);
   }
+  if (event.kind === 20000) {
+    tagsReply.push(...event.tags.filter((tag) => tag.length >= 2 && tag[0] === 'g'), ['n', 'Mahjong Bot'], ['t', 'teleport']);
+  }
   return tagsReply;
 };
 
