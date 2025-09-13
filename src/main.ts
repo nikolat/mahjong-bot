@@ -1,10 +1,11 @@
 import type { VerifiedEvent } from 'nostr-tools/pure';
+import type { Signer } from 'nostr-tools/signer';
 import * as nip19 from 'nostr-tools/nip19';
 import { createRxForwardReq, createRxNostr, uniq, type EventPacket } from 'rx-nostr';
 import { verifier } from '@rx-nostr/crypto';
 import { Subject } from 'rxjs';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { getNowWithoutSecond, Mode, sendBootReaction, sendRequestPassport, Signer, zapSplit } from './utils.js';
+import { getNowWithoutSecond, Mode, sendBootReaction, sendRequestPassport, zapSplit } from './utils.js';
 import { relayUrls, isDebug, getServerSignerMap, getPlayerSignerMap, mahjongChannelIds } from './config.js';
 import { getResponseEvent } from './response.js';
 import { page } from './page.js';
@@ -12,8 +13,8 @@ import { page } from './page.js';
 if (!isDebug) page();
 
 const main = async () => {
-  const serverSignerMap = getServerSignerMap();
-  const playerSignerMap = getPlayerSignerMap();
+  const serverSignerMap = await getServerSignerMap();
+  const playerSignerMap = await getPlayerSignerMap();
   const signerMap = new Map<string, Signer>([...serverSignerMap, ...playerSignerMap]);
   const rxNostr = createRxNostr({
     verifier,
@@ -78,7 +79,7 @@ const main = async () => {
     if (pubkey === undefined) {
       return;
     }
-    const signer = serverSigners.find((signer) => signer.getPublicKey() === pubkey);
+    const signer = serverSigners.find(async (signer) => (await signer.getPublicKey()) === pubkey);
     if (signer === undefined) {
       return;
     }

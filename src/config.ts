@@ -1,5 +1,5 @@
 import * as nip19 from 'nostr-tools/nip19';
-import { Signer } from './utils.js';
+import { PlainKeySigner as Signer } from 'nostr-tools/signer';
 
 export const relayUrls: string[] = ['wss://relay.nostr.wirednet.jp/', 'wss://yabu.me/'];
 
@@ -31,15 +31,15 @@ export const pubkeysOfRelayOwnerToZap: string[] = [
   'npub1kurad0nlm8xfuxhws05pcwv5z4k0ea6da4dsjygexr77a666pssqsftsm7',
 ].map((npub) => nip19.decode(npub).data as string);
 
-export const getServerSignerMap = (): Map<string, Signer> => {
-  return getSignerMap(mahjongServerNsecs);
+export const getServerSignerMap = async (): Promise<Map<string, Signer>> => {
+  return await getSignerMap(mahjongServerNsecs);
 };
 
-export const getPlayerSignerMap = (): Map<string, Signer> => {
-  return getSignerMap(mahjongPlayerNsecs);
+export const getPlayerSignerMap = async (): Promise<Map<string, Signer>> => {
+  return await getSignerMap(mahjongPlayerNsecs);
 };
 
-const getSignerMap = (nsecs: (string | undefined)[]): Map<string, Signer> => {
+const getSignerMap = async (nsecs: (string | undefined)[]): Promise<Map<string, Signer>> => {
   const m = new Map<string, Signer>();
   for (const nsec of nsecs) {
     if (nsec === undefined) {
@@ -51,7 +51,7 @@ const getSignerMap = (nsecs: (string | undefined)[]): Map<string, Signer> => {
     }
     const seckey: Uint8Array = dr.data;
     const signer = new Signer(seckey);
-    m.set(signer.getPublicKey(), signer);
+    m.set(await signer.getPublicKey(), signer);
   }
   return m;
 };

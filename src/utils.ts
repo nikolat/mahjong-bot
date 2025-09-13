@@ -1,6 +1,7 @@
 import type { Readable } from 'node:stream';
 import { Buffer } from 'node:buffer';
-import { type EventTemplate, type NostrEvent, type VerifiedEvent, finalizeEvent, getPublicKey, verifyEvent } from 'nostr-tools/pure';
+import { type NostrEvent, type VerifiedEvent, verifyEvent } from 'nostr-tools/pure';
+import type { Signer } from 'nostr-tools/signer';
 import type { Filter } from 'nostr-tools/filter';
 import * as nip19 from 'nostr-tools/nip19';
 import * as nip57 from 'nostr-tools/nip57';
@@ -24,32 +25,16 @@ export const buffer = async (readable: Readable) => {
   return Buffer.concat(chunks);
 };
 
-export class Signer {
-  #seckey: Uint8Array;
-
-  constructor(seckey: Uint8Array) {
-    this.#seckey = seckey;
-  }
-
-  getPublicKey = () => {
-    return getPublicKey(this.#seckey);
-  };
-
-  finishEvent = (unsignedEvent: EventTemplate) => {
-    return finalizeEvent(unsignedEvent, this.#seckey);
-  };
-}
-
 export const getNowWithoutSecond = (): number => {
   const d = new Date();
   return Math.floor(new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes()).getTime() / 1000);
 };
 
-export const sendBootReaction = (rxNostr: RxNostr, serverSigner: Signer) => {
+export const sendBootReaction = async (rxNostr: RxNostr, serverSigner: Signer) => {
   const rxReqB = createRxBackwardReq();
   let bootEvent: VerifiedEvent;
-  const nextB = (packet: EventPacket) => {
-    bootEvent = serverSigner.finishEvent({
+  const nextB = async (packet: EventPacket) => {
+    bootEvent = await serverSigner.signEvent({
       kind: 7,
       tags: getTagsFav(packet.event),
       content: '🌅',
@@ -66,7 +51,7 @@ export const sendBootReaction = (rxNostr: RxNostr, serverSigner: Signer) => {
   const _subscriptionB = rxNostr.use(rxReqB).subscribe({ next: nextB, complete });
   rxReqB.emit({
     kinds: [42],
-    '#p': [serverSigner.getPublicKey()],
+    '#p': [await serverSigner.getPublicKey()],
     '#e': mahjongChannelIds,
     until: Math.floor(Date.now() / 1000),
     limit: 1,
@@ -74,14 +59,14 @@ export const sendBootReaction = (rxNostr: RxNostr, serverSigner: Signer) => {
   rxReqB.over();
 };
 
-export const sendRequestPassport = (rxNostr: RxNostr, signer: Signer) => {
+export const sendRequestPassport = async (rxNostr: RxNostr, signer: Signer) => {
   const npub_yabumi = 'npub1823chanrkmyrfgz2v4pwmu22s8fjy0s9ps7vnd68n7xgd8zr9neqlc2e5r';
   const mahjongChannelId = mahjongChannelIds.at(0);
   if (mahjongChannelId === undefined) {
     console.warn('mahjongChannelIds is undefined');
     return;
   }
-  const requestEvent: VerifiedEvent = signer.finishEvent({
+  const requestEvent: VerifiedEvent = await signer.signEvent({
     kind: 42,
     tags: [
       ['e', mahjongChannelId, '', 'root'],
@@ -110,7 +95,7 @@ export const zapSplit = async (rxNostr: RxNostr, event: NostrEvent, signer: Sign
     return;
   }
   //kind9735の検証
-  const evKind0: NostrEvent | null = await getKind0(rxNostr, signer.getPublicKey());
+  const evKind0: NostrEvent | null = await getKind0(rxNostr, await signer.getPublicKey());
   if (evKind0 === null) {
     console.warn('Cannot get kind 0 event');
     return;
@@ -202,7 +187,7 @@ const zapByNIP47 = async (rxNostr: RxNostr, pubkey: string, signer: Signer, sats
     comment: zapComment,
     relays: relayUrls,
   });
-  const zapRequestEvent = signer.finishEvent(zapRequest);
+  const zapRequestEvent = await signer.signEvent(zapRequest);
   const encoded = encodeURI(JSON.stringify(zapRequestEvent));
 
   const url = `${zapEndpoint}?amount=${amount}&nostr=${encoded}`;

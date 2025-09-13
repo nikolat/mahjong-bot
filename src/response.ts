@@ -1,6 +1,7 @@
 import { getEventHash, type UnsignedEvent, type EventTemplate, type NostrEvent, type VerifiedEvent } from 'nostr-tools/pure';
+import type { Signer } from 'nostr-tools/signer';
 import * as nip19 from 'nostr-tools/nip19';
-import { Mode, Signer, getTagsAirrep, getTagsReply } from './utils.js';
+import { Mode, getTagsAirrep, getTagsReply } from './utils.js';
 import { MahjongCore } from './mj_main.js';
 import { getBafuLength, getServerSignerMap } from './config.js';
 
@@ -9,7 +10,7 @@ const status_kind = 30315;
 const channelMahjongCoreMap = new Map<string, MahjongCore>();
 
 export const getResponseEvent = async (requestEvent: NostrEvent, signer: Signer, mode: Mode): Promise<VerifiedEvent[] | null> => {
-  if (requestEvent.pubkey === signer.getPublicKey()) {
+  if (requestEvent.pubkey === (await signer.getPublicKey())) {
     //自分自身の投稿には反応しない
     return null;
   }
@@ -17,13 +18,15 @@ export const getResponseEvent = async (requestEvent: NostrEvent, signer: Signer,
   if (res === null) {
     return null;
   }
-  const unsignedEvents: UnsignedEvent[] = res.map((ev) => {
-    return {
-      ...ev,
-      pubkey: signer.getPublicKey(),
-    };
-  });
-  return mineNonceForSort(unsignedEvents).map((ev) => signer.finishEvent(ev));
+  const unsignedEvents: UnsignedEvent[] = await Promise.all(
+    res.map(async (ev) => {
+      return {
+        ...ev,
+        pubkey: await signer.getPublicKey(),
+      };
+    }),
+  );
+  return await Promise.all(mineNonceForSort(unsignedEvents).map(async (ev) => await signer.signEvent(ev)));
 };
 
 const mineNonceForSort = (events: UnsignedEvent[]): UnsignedEvent[] => {
@@ -209,7 +212,7 @@ const res_s_naku = (event: NostrEvent, mode: Mode, regstr: RegExp): [string, num
   return getCore(event).res_s_naku_call(event, action, pai1, pai2);
 };
 
-const serverPubkey = Array.from(getServerSignerMap().keys()).at(0)!;
+const serverPubkey = Array.from((await getServerSignerMap()).keys()).at(0)!;
 
 const res_c_join = (event: NostrEvent): [string, number, string[][]][] => {
   return [[`nostr:${nip19.npubEncode(serverPubkey)} join`, event.kind, [...getTagsAirrep(event), ['p', serverPubkey]]]];
