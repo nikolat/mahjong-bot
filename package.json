@@ -16,6 +16,7 @@
     "start": "node ./dist/main.js"
   },
   "dependencies": {
+    "@noble/hashes": "^2.2.0",
     "@rx-nostr/crypto": "^3.1.6",
     "express": "^5.2.1",
     "nostr-tools": "^2.23.9",
