@@ -16,17 +16,17 @@
     "start": "node ./dist/main.js"
   },
   "dependencies": {
-    "@rx-nostr/crypto": "^0.0.0",
+    "@rx-nostr/crypto": "^3.1.6",
     "express": "^5.2.1",
-    "nostr-tools": "^2.23.3",
-    "rx-nostr": "^3.6.2"
+    "nostr-tools": "^2.23.9",
+    "rx-nostr": "^3.7.5"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
-    "@types/node": "^25.3.3",
-    "prettier": "^3.8.1",
+    "@types/node": "^26.1.0",
+    "prettier": "^3.9.4",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   },
   "engines": {
     "node": "24.x"
