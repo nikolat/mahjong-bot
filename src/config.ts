@@ -1,7 +1,7 @@
 import * as nip19 from 'nostr-tools/nip19';
 import { PlainKeySigner as Signer } from 'nostr-tools/signer';
 
-export const relayUrls: string[] = ['wss://relay.nostr.wirednet.jp/', 'wss://yabu.me/'];
+export const relayUrls: string[] = ['wss://relay.nostr.wirednet.jp/', 'wss://yabu.me/', 'wss://ephemeral.snowflare.cc/'];
 
 export const mahjongChannelIds: string[] = [
   'c8d5c2709a5670d6f621ac8020ac3e4fc3057a4961a15319f7c0818309407723',
