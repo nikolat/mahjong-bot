@@ -6,7 +6,7 @@ import type { Filter } from 'nostr-tools/filter';
 import * as nip19 from 'nostr-tools/nip19';
 import * as nip57 from 'nostr-tools/nip57';
 import { nip47 } from 'nostr-tools';
-import { hexToBytes } from '@noble/hashes/utils';
+import { hexToBytes } from '@noble/hashes/utils.js';
 import { type EventPacket, type RxNostr, createRxBackwardReq } from 'rx-nostr';
 import { mahjongChannelIds, nostrWalletConnect, pubkeysOfRelayOwnerToZap, relayUrls } from './config.js';
 import { stringToArrayPlain } from './mjlib/mj_common.js';
