@@ -9,6 +9,8 @@ const status_kind = 30315;
 
 const channelMahjongCoreMap = new Map<string, MahjongCore>();
 
+let lastCreatedAt: number | undefined;
+
 export const getResponseEvent = async (requestEvent: NostrEvent, signer: Signer, mode: Mode): Promise<VerifiedEvent[] | null> => {
   if (requestEvent.pubkey === (await signer.getPublicKey())) {
     //自分自身の投稿には反応しない
@@ -54,8 +56,10 @@ const selectResponse = async (event: NostrEvent, mode: Mode, signer: Signer): Pr
     return null;
   }
   const templateEvents: EventTemplate[] = [];
+  const res_created_at: number = Math.max(lastCreatedAt ?? 0, event.created_at) + 1;
+  lastCreatedAt = res_created_at;
   for (const ev of res) {
-    const [content, kind, tags, created_at] = [...ev, event.created_at + 1];
+    const [content, kind, tags, created_at] = [...ev, res_created_at];
     const templateEvent: EventTemplate = { kind, tags, content, created_at };
     templateEvents.push(templateEvent);
   }
@@ -164,6 +168,7 @@ const res_s_next = (event: NostrEvent): [string, number, string[][]][] | null =>
 
 const res_s_reset = (event: NostrEvent): [string, number, string[][]][] | null => {
   getCore(event).res_s_reset_call();
+  lastCreatedAt = undefined;
   const channedId = event.tags.find((tag) => tag.length >= 4 && tag[0] === 'e' && tag[3] === 'root')?.at(1) ?? '';
   return [
     ['Data cleared.', event.kind, getTagsAirrep(event)],
