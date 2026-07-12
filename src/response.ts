@@ -3,7 +3,7 @@ import type { Signer } from 'nostr-tools/signer';
 import * as nip19 from 'nostr-tools/nip19';
 import { Mode, getTagsAirrep, getTagsReply } from './utils.js';
 import { MahjongCore } from './mj_main.js';
-import { getBafuLength, getServerSignerMap } from './config.js';
+import { getBafuLength, getPlayerSignerMap, getServerSignerMap } from './config.js';
 
 const status_kind = 30315;
 
@@ -74,6 +74,7 @@ const getResmap = (
     [/help$/, res_help],
     [/^(nostr:npub1\w{58}\s+)?gamestart/, res_s_gamestart],
     [/join$/, res_s_join],
+    [/cpu$/, res_s_cpu],
     [/next$/, res_s_next],
     [/reset$/, res_s_reset],
     [/status$/, res_s_status],
@@ -121,6 +122,7 @@ const res_help = (event: NostrEvent): [string, number, string[][]][] => {
     'ping: pongと返します',
     'gamestart: ゲーム開始 メンバーを4人まで募集します',
     'join: ゲームに参加 募集中のゲームに参加します',
+    'cpu: CPUモード 後述の3体の麻雀クライアントbotに参加を促します',
     'next: 次の局に移ります',
     'reset: データをクリアします',
     'status: 現在の場の状況を表示します',
@@ -160,6 +162,14 @@ const res_s_gamestart = (event: NostrEvent): [string, number, string[][]][] | nu
 
 const res_s_join = (event: NostrEvent): [string, number, string[][]][] | null => {
   return getCore(event).res_s_join_call(event);
+};
+
+const playerPubkeys: string[] = Array.from((await getPlayerSignerMap()).keys());
+
+const res_s_cpu = (event: NostrEvent): [string, number, string[][]][] | null => {
+  const ps: string[] = playerPubkeys.slice(0, 3);
+  const content: string = `${ps.map((pubkey) => {`nostr:${nip19.npubEncode(pubkey)}`}).join(' ')} join`;
+  return [[content, event.kind, [...getTagsAirrep(event), ...ps.map(p => ['p', p])]]];
 };
 
 const res_s_next = (event: NostrEvent): [string, number, string[][]][] | null => {
