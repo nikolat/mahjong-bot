@@ -168,8 +168,8 @@ const playerPubkeys: string[] = Array.from((await getPlayerSignerMap()).keys());
 
 const res_s_cpu = (event: NostrEvent): [string, number, string[][]][] | null => {
   const ps: string[] = playerPubkeys.slice(0, 3);
-  const content: string = `${ps.map((pubkey) => {`nostr:${nip19.npubEncode(pubkey)}`}).join(' ')} join`;
-  return [[content, event.kind, [...getTagsAirrep(event), ...ps.map(p => ['p', p])]]];
+  const content: string = `${ps.map((p) => `nostr:${nip19.npubEncode(p)}`).join(' ')} join`;
+  return [[content, event.kind, [...getTagsAirrep(event), ...ps.map((p) => ['p', p])]]];
 };
 
 const res_s_next = (event: NostrEvent): [string, number, string[][]][] | null => {
